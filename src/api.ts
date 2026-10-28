@@ -81,6 +81,8 @@ export interface CaseDetail {
   approval: { state: "none" | "approved" | "expired" | "review_changed"; approvedDigest?: string; expiresAt?: string };
   attempts: Attempt[];
   linkedDispute: string | null;
+  /** Present for cases linked to a real sandbox dispute. */
+  paypal: { canRefresh: boolean; last: { status: string; observedAt: string } | null } | null;
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
@@ -100,5 +102,6 @@ export const api = {
   advance: (id: string) => call<{ added: Source }>(`/api/cases/${id}/advance`, { method: "POST" }),
   approve: (id: string, digest: string) => post(`/api/cases/${id}/approve`, { digest }),
   submit: (id: string, digest: string) => post(`/api/cases/${id}/submit`, { digest }),
+  refreshPaypal: (id: string) => post(`/api/cases/${id}/refresh`, {}),
   reset: () => call<{ ok: true }>("/api/scenario/reset", { method: "POST" }),
 };

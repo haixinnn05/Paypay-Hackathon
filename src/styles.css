@@ -244,3 +244,5 @@ button.icon { padding: 7px; }
 .ag-studio-layout-widget-skeleton-overlay-container:not(.ag-studio-layout-widget-skeleton-overlay-container-active) {
   pointer-events: none;
 }
+
+.dc-paypal-status { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--dc-gridline); }

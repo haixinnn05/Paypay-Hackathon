@@ -65,6 +65,7 @@ export const store = {
   advance: () => run(api.advance),
   approve: (digest: string) => run((id) => api.approve(id, digest)),
   submit: (digest: string) => run((id) => api.submit(id, digest)),
+  refreshPaypal: () => run(api.refreshPaypal),
   async reset() {
     await api.reset();
     set({ selectedId: null, detail: null, focusedSource: null, error: null });

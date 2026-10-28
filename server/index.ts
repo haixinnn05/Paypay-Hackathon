@@ -19,10 +19,21 @@ const aiLimit = rateLimit("assistant", Number(process.env.AI_LIMIT ?? 80), Numbe
 // Latest assessment per case. An assessment is stale once the case revision moves past it.
 const assessments = new Map<string, AssessmentResult>();
 
+// What PayPal last reported for linked cases, from "Refresh from PayPal" or a submission's read-back.
+const observed = new Map<string, { status: string; observedAt: string }>();
+
+function paypalObservation(caseId: string): { status: string; observedAt: string } | null {
+  const fromRefresh = observed.get(caseId);
+  const seen = attemptsFor(caseId).findLast((a) => a.target.mode === "sandbox" && a.readBack && "status" in a.readBack);
+  const fromAttempt = seen?.readBack && "status" in seen.readBack ? { status: seen.readBack.status, observedAt: seen.readBack.observedAt } : null;
+  if (!fromRefresh) return fromAttempt;
+  if (!fromAttempt) return fromRefresh;
+  return fromRefresh.observedAt > fromAttempt.observedAt ? fromRefresh : fromAttempt;
+}
+
 /** For a case linked to a real sandbox dispute, the status PayPal last reported beats the fixture's. */
 function providerStatus(c: ReturnType<typeof cases>[number]): string {
-  const seen = attemptsFor(c.caseId).findLast((a) => a.target.mode === "sandbox" && a.readBack && "status" in a.readBack);
-  return seen?.readBack && "status" in seen.readBack ? seen.readBack.status : c.providerStatus;
+  return paypalObservation(c.caseId)?.status ?? c.providerStatus;
 }
 
 function queueRow(c: ReturnType<typeof cases>[number]) {
@@ -84,7 +95,25 @@ app.get("/api/cases/:id", (req, res) => {
     approval: approvalState(c.caseId, proposal),
     attempts: attemptsFor(c.caseId),
     linkedDispute: linkedDispute(c.caseId),
+    paypal: linkedDispute(c.caseId) ? { canRefresh: paypalConfigured(), last: paypalObservation(c.caseId) } : null,
   });
+});
+
+// Re-read the linked sandbox dispute so the case shows what PayPal says now.
+app.post("/api/cases/:id/refresh", async (req, res) => {
+  const c = findCase(String(req.params.id));
+  if (!c) return res.status(404).json({ error: "Unknown case" });
+  const disputeId = linkedDispute(c.caseId);
+  if (!disputeId) return res.status(409).json({ error: "This case isn't linked to a PayPal dispute." });
+  if (!paypalConfigured()) return res.status(503).json({ error: "PayPal isn't configured on this deployment." });
+  try {
+    const d = await getDispute(disputeId);
+    const seen = { status: d.status, observedAt: new Date().toISOString() };
+    observed.set(c.caseId, seen);
+    res.json(seen);
+  } catch (err) {
+    sendError(res, err);
+  }
 });
 
 app.post("/api/cases/:id/approve", (req, res) => {
@@ -138,6 +167,7 @@ app.post("/api/scenario/reset", (_req, res) => {
   resetScenario();
   assessments.clear();
   resetSimulatedAttempts();
+  observed.clear();
   res.json({ ok: true });
 });
 

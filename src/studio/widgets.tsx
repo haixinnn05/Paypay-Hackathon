@@ -2,6 +2,7 @@ import { useEffect, useRef, type ComponentType } from "react";
 import type { AgDefaultRegistry, AgDefaultWidgetDefinition, AgWidgetApi, AgWidgetData, AgWidgetDataFormat, AgWidgetParams, AgWidgetsConfig } from "ag-studio";
 import { createWidgets, type AgWidgetDefinition } from "ag-studio-react";
 import {
+  ArrowClockwise,
   ArrowUUpLeft,
   ChatText,
   CheckCircle,
@@ -20,7 +21,7 @@ import {
   XCircle,
   type Icon,
 } from "@phosphor-icons/react";
-import type { Assessment, Attempt, QueueRow, Source } from "../api.ts";
+import type { Assessment, Attempt, CaseDetail, QueueRow, Source } from "../api.ts";
 import { store, useStore } from "../store.ts";
 
 // Custom Studio widgets. They hold no data mappings: each reads the shared store (also passed to
@@ -472,6 +473,39 @@ function ActionReview(params: Params<"action-review">) {
       )}
 
       {last && <Receipt attempt={last} />}
+      {detail.paypal && <PaypalStatus paypal={detail.paypal} busy={busy} />}
+    </div>
+  );
+}
+
+const STATUS_TEXT: Record<string, string> = {
+  WAITING_FOR_SELLER_RESPONSE: "Waiting for your response",
+  WAITING_FOR_BUYER_RESPONSE: "Waiting for the buyer",
+  UNDER_REVIEW: "Under PayPal review",
+  RESOLVED: "Resolved",
+  OTHER: "Other",
+};
+
+function PaypalStatus({ paypal, busy }: { paypal: NonNullable<CaseDetail["paypal"]>; busy: boolean }) {
+  return (
+    <div className="dc-paypal-status">
+      <div className="dc-small">
+        <span className="dc-muted">PayPal says </span>
+        {paypal.last ? (
+          <>
+            <strong>{STATUS_TEXT[paypal.last.status] ?? paypal.last.status}</strong>
+            <span className="dc-muted">, checked {new Date(paypal.last.observedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+          </>
+        ) : (
+          <span className="dc-muted">not checked yet</span>
+        )}
+      </div>
+      {paypal.canRefresh && (
+        <button className="ghost" disabled={busy} onClick={store.refreshPaypal}>
+          <ArrowClockwise size={15} />
+          Refresh from PayPal
+        </button>
+      )}
     </div>
   );
 }
@@ -489,8 +523,7 @@ function Receipt({ attempt }: { attempt: Attempt }) {
           <p className="dc-error">Couldn't read the case back: {attempt.readBack.error}</p>
         ) : (
           <p className="dc-small">
-            PayPal case status at {new Date(attempt.readBack.observedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}:{" "}
-            <code>{attempt.readBack.status}</code>
+            Right after sending, PayPal said: {STATUS_TEXT[attempt.readBack.status] ?? attempt.readBack.status}
           </p>
         ))}
       {attempt.error && (
