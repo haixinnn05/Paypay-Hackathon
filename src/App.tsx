@@ -25,9 +25,14 @@ export function App() {
   useEffect(() => {
     store.refresh();
     // The server decides which gateway models the assistant may use.
-    fetch("/api/ai/models")
+    // Only ask for models when the server runs live AI; the public demo serves saved results instead.
+    fetch("/api/config")
       .then((r) => r.json())
-      .then(({ models }: { models: string[] }) => setAi(buildAi(models)))
+      .then(async ({ aiMode }: { aiMode: "live" | "saved" }) => {
+        if (aiMode !== "live") return setAi(null);
+        const { models }: { models: string[] } = await fetch("/api/ai/models").then((r) => r.json());
+        setAi(buildAi(models));
+      })
       .catch(() => setAi(null));
   }, []);
 
