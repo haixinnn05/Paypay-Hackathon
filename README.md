@@ -1,56 +1,130 @@
 # Dispute Copilot
 
-A workspace for small PayPal sellers handling "item not received" disputes. AI reads the seller's records, explains what they support or contradict, and drafts a cited response. The seller reviews and decides. Built for the PayPal AI Hackathon with AG Studio.
+A workspace for small PayPal sellers handling "item not received" disputes. AI reads the seller's records, says what they support, contradict or leave open, and drafts a response where every sentence cites its source. The seller reviews, approves the exact version, and submits it to PayPal. If any record changes after approval, the approval stops working.
 
-**Status: early build.** Working today: synthetic scenario, AG Studio workspace with the case queue as a data source, Claude assessment with citation checks, assessments marked stale when records change, read-only PayPal sandbox probe. Not built yet: approval and submission to PayPal, custom Studio widgets, the Studio agent, hosting.
+Built for the PayPal AI Hackathon with the PayPal Disputes API, Claude (through the Astropods AI Gateway) and AG Studio.
 
-## Run locally
+**Live demo: https://dispute-copilot-dvp8.onrender.com**
 
-Requires Node.js 22+.
+## Try it in two minutes
+
+The demo opens on a fictional pottery shop with five open disputes. All records are synthetic.
+
+1. Pick **M. O\*\*\*\*\*, SCN-1002** in the case list on the left (due soonest).
+2. Click **Assess this case**. The verdict says the records support a response, and the red box shows where the buyer's claim and the carrier record disagree.
+3. Click a citation such as **S3**. The matching record lights up in the timeline below.
+4. In **Respond to PayPal**, read the exact message and tracking that would be sent, then click **Approve this version**.
+5. Click **Add next record (demo)**. A carrier correction arrives saying the parcel went back to the sender. The case turns **Review changed**, the old assessment fades, and **Submit is no longer offered**: the approval was tied to the records that just changed.
+6. Click **Reassess**. The verdict changes to **Consider a refund instead**.
+7. Click **Reset demo** to start over.
+
+On the hosted demo:
+
+- **AI results are saved, not live.** Each assessment was generated in advance with the live model for that exact case state, and is labelled "Saved AI result". No AI key lives on the server, and the chat assistant is switched off.
+- **Submissions are simulated.** Nothing is sent to PayPal from the public site.
+- **The demo is shared.** If someone else has been clicking around, press **Reset demo**.
+
+To see live AI, the assistant and a real PayPal sandbox submission, run it locally (below) or watch the demo video.
+
+## What it does
+
+| Part | What happens |
+| --- | --- |
+| **Case queue** | Cases grouped by urgency (due this week, later, answered), with deadline countdowns and the next step for each. |
+| **Assessment** | Claude reads the buyer's claim and the seller's records and returns structured findings (supported, conflicting, missing, unconfirmed), a recommendation, a cited draft and questions for the seller. The server rejects citations to records that don't exist and flags uncited sentences. |
+| **Evidence inspector** | Conflicts first, then gaps. Records appear as a timeline; anything that arrived after the assessment is marked **New**. |
+| **Respond to PayPal** | The exact payload: proof of delivery with carrier and tracking, plus the message. Approve and Submit are separate clicks. |
+| **Approval binding** | An approval covers one version of the case, records, draft and action, and expires after five minutes. Any change invalidates it. Before submitting, the server re-reads the PayPal dispute, checks it still accepts evidence and that its amount matches the case, records the attempt, then sends exactly once. |
+| **Assistant** (local, live AI) | A chat drawer on AG Studio's agent framework. Our Dispute agent reads cases and opens them on screen; for dashboard changes ("add a chart of disputed amount by due date") it hands off to AG Studio's built-in agents. It has no tool that can approve, submit or refund. |
+
+## How PayPal is used
+
+PayPal Disputes API, sandbox only (the client has no live host):
+
+- `GET /v1/customer/disputes` and `GET /v1/customer/disputes/{id}` to read cases and the actions PayPal currently allows.
+- `POST /v1/customer/disputes/{id}/provide-evidence` with `PROOF_OF_FULFILLMENT` (carrier and tracking) and notes, sent only to the exact `provide_evidence` link PayPal advertises for that dispute.
+- The dispute is read back after submission and its new status is shown.
+
+We tested this end to end on a real sandbox dispute: PayPal accepted the evidence and moved the case to `UNDER_REVIEW`, then `WAITING_FOR_BUYER_RESPONSE`. An accepted submission is shown as **Evidence accepted by PayPal**, never as a won case.
+
+## AI and tools used
+
+- **Claude Opus 5.5** through the **Astropods AI Gateway** (OpenAI-compatible endpoint, structured JSON-schema output). Used for case assessments (server-side, `server/assess.ts`) and for the agents behind the assistant.
+- **AG Studio** (AG Grid): the whole workspace. Custom widgets (case queue, evidence inspector, action review), a custom theme with frosted-glass panels, a preset layout, built-in value widgets, and the **Studio Agent Framework**: a custom primary agent with its own tools that delegates dashboard work to Studio's built-in agents, plus our own chat drawer built on Studio's AI harness.
+- **Render** for hosting.
+- Built with **Claude Code** as the coding assistant.
+
+## Run it locally with live AI
+
+Requires Node.js 22+ and Docker (only for minting AI keys).
 
 ```sh
+git clone https://github.com/haixinnn05/Paypay-Hackathon.git
+cd Paypay-Hackathon
 npm install
-cp .env.example .env   # then fill it in (see below)
-npm run dev            # API on :8787, app on http://localhost:5173
+cp .env.example .env
 ```
 
-`.env`:
-
-- `ASTRO_GATEWAY_URL` / `ASTRO_GATEWAY_API_KEY`: needed for **Run assessment**. Run `npm run gateway-key` to fill them (see below).
-- `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET`: sandbox REST app credentials. Only needed for the probe and the sandbox endpoints. Never use live credentials; the client is hard-wired to the sandbox host.
-- `VITE_AG_STUDIO_LICENSE_KEY`: optional. Without it AG Studio runs locally with a watermark.
-
-## Scenario mode
-
-All scenario records are fictional (`fixtures/scenario.json`). **SCN-1002** is the main demo case: assess it, click **Simulate new record arriving** (a carrier correction says the parcel was returned to sender), and the earlier assessment is marked **Review changed**. **Reset scenario** restores the fixtures. It never touches PayPal.
-
-## PayPal sandbox probe (read-only)
-
-1. In [PayPal Developer](https://developer.paypal.com/) > Testing Tools > Sandbox Accounts, use one **business** account (the merchant) and one **personal** account (the buyer).
-2. Create a sandbox REST app for the business account and put its credentials in `.env`.
-3. Log in to [sandbox.paypal.com](https://www.sandbox.paypal.com/) as the buyer, send a payment to the business account, then open an "item not received" dispute in the Resolution Center. See PayPal's [sandbox dispute guide](https://developer.paypal.com/disputes/test-go-live).
-4. Run:
+**1. Live AI (Astropods AI Gateway, free account)**
 
 ```sh
-npm run probe list               # disputes this merchant app can see
-npm run probe inspect <disputeId> # status, deadline and the actions PayPal currently allows
+curl -fsSL https://astropods.com/install | sh   # installs the ast CLI
+ast login
+ast project create astropods-gateway-dev --model gateway -y --path ~/projects
+npm run gateway-key   # writes a 24-hour development key into .env without printing it
 ```
 
-If a request fails, the probe prints PayPal's debug ID. Record it.
+Rerun `npm run gateway-key` when the key expires. Without a key the app falls back to the saved results, like the hosted demo.
 
-## AI Gateway (Astropods)
+**2. PayPal sandbox (optional, for real submissions)**
 
-Assessments call Claude through the [Astropods](https://astropods.com) AI Gateway, an OpenAI-compatible endpoint that needs no model-provider key. For local development:
+1. In [PayPal Developer](https://developer.paypal.com/) (Sandbox), create a REST app for your sandbox **business** account and put its client ID and secret in `.env`.
+2. Sign in to [sandbox.paypal.com](https://www.sandbox.paypal.com/) as the sandbox **personal** account, send a payment to the business account as goods and services, and open an "item not received" dispute in the Resolution Center.
+3. `npm run probe list` shows the disputes the app can see; `npm run probe inspect <id>` shows the actions PayPal currently allows. New disputes can take a few minutes to appear.
+4. Link a scenario case to the dispute and allow writes, for example for a $40 dispute:
+   ```
+   SANDBOX_LINKS=SCN-1005:PP-R-XXX-00000000
+   ALLOW_SANDBOX_WRITES=true
+   ```
+   The server refuses to submit if the dispute's amount doesn't match the case.
 
-1. Install the CLI (`curl -fsSL https://astropods.com/install | sh`), then run `ast login` once.
-2. Create the dev harness once: `ast project create astropods-gateway-dev --model gateway -y --path ~/projects`.
-3. Run `npm run gateway-key` (Docker must be running). It starts the harness, copies a 24-hour development key into `.env` without printing it, and stops the harness again. Rerun it when the key expires.
+**3. Start**
 
-## AI and tools
+```sh
+npm run dev   # http://localhost:5173
+```
 
-- **Claude Opus 5.5** via the Astropods AI Gateway, server-side: structured assessment of each case (findings, recommendation, cited draft, questions for the seller). The server rejects nothing silently: unknown source IDs and uncited draft sentences are reported in the UI. Refusals and malformed output show as errors, never as a fallback result.
-- **AG Studio** (AG Grid): the workspace and case queue.
-- **PayPal Disputes API** (sandbox): reading disputes; evidence submission is next.
+## Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `ASTRO_GATEWAY_URL`, `ASTRO_GATEWAY_API_KEY` | AI Gateway. Filled by `npm run gateway-key`. |
+| `AI_MODE` | `live` or `saved`. Defaults to `live` when a key is set. |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | Sandbox REST app. Optional. |
+| `SANDBOX_LINKS` | `CASE:DISPUTE` pairs linking scenario cases to real sandbox disputes. |
+| `ALLOW_SANDBOX_WRITES` | Real submissions happen only when `true`. Leave unset on a public deployment. |
+| `STUDIO_AI_MODELS` | Models the assistant may use. Default `claude-opus-5-5`. |
+| `ASSESS_LIMIT`, `AI_LIMIT`, and their `_DAILY_` variants | Per-visitor and daily limits on AI use. |
+| `VITE_AG_STUDIO_LICENSE_KEY` | Optional. Without it AG Studio shows a watermark. |
+
+`npm run save-assessments` regenerates `fixtures/saved-assessments.json` with the live model.
+
+## Project layout
+
+```
+server/      Express API: PayPal client, assessments, approvals and submissions, AI proxy, limits
+src/         React app: store, assistant drawer, styles
+src/studio/  AG Studio theme, data source, preset layout, custom widgets, agents
+fixtures/    Synthetic scenario and saved AI results
+scripts/     Sandbox probe, saved-result generator, gateway key helper
+```
+
+## Limits
+
+- One fictional merchant and one dispute reason (item not received). Other reasons and refund offers are left to PayPal.
+- Assessments are a reading of the records, not a prediction. A carrier "delivered" scan is shown as a carrier record, not as proof the buyer received the parcel.
+- Submission attempts are stored in a local JSON file. A timeout leaves the case in **Needs reconciliation** and blocks further submissions until it is checked in PayPal.
+- No seller has used it yet; time savings and outcomes are not measured.
 
 ## Licence
 
