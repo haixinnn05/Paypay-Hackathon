@@ -1,6 +1,6 @@
 # Dispute Copilot
 
-A workspace for small PayPal sellers handling "item not received" disputes. AI reads the seller's records, says what they support, contradict or leave open, and drafts a response where every sentence cites its source. The seller reviews, approves the exact version, and submits it to PayPal. If any record changes after approval, the approval stops working.
+A dispute desk for small PayPal sellers, with an autopilot. It loads the seller's open "item not received" disputes straight from PayPal, has AI read the records (what they support, contradict or leave open, with every claim cited), and then handles the routine cases under rules the seller sets: refund small claims that never shipped, message the buyer first, or submit evidence when the records clearly support it. Everything else waits for the seller, who approves the exact version that goes to PayPal. The AI reads; the seller's rules decide; PayPal carries it out; every action lands in an activity log.
 
 Built for the PayPal AI Hackathon with the PayPal Disputes API, Claude (through the Astropods AI Gateway) and AG Studio.
 
@@ -16,12 +16,13 @@ The demo opens on a fictional pottery shop with five open disputes. All records 
 4. In **Respond to PayPal**, read the exact message and tracking that would be sent, then click **Approve this version**.
 5. Click **Add next record (demo)**. A carrier correction arrives saying the parcel went back to the sender. The case turns **Review changed**, the old assessment fades, and **Submit is no longer offered**: the approval was tied to the records that just changed.
 6. Click **Reassess**. The verdict changes to **Consider a refund instead**.
-7. Click **Reset demo** to start over.
+7. Open the **Autopilot** tab and click **Preview**. Each open case gets a plain decision: the $12 order that never shipped (SCN-1006) would be refunded under the "refund small claims" rule, the $61 case is left for you because a refund there is above your limit, and so on. Nothing is sent until you click **Run**, which carries out exactly what the preview showed and records it in the activity log.
+8. Click **Reset demo** to start over.
 
 On the hosted demo:
 
 - **AI results are saved, not live.** Each assessment was generated in advance with the live model for that exact case state, and is labelled "Saved AI result". No AI key lives on the server, and the chat assistant is switched off.
-- **Submissions are simulated.** Nothing is sent to PayPal from the public site.
+- **PayPal actions are simulated,** including the autopilot's. Nothing is sent to PayPal from the public site, and it shows only the demo cases.
 - **The demo is shared.** If someone else has been clicking around, press **Reset demo**.
 
 To see live AI, the assistant and a real PayPal sandbox submission, run it locally (below) or watch the demo video.
@@ -35,15 +36,19 @@ To see live AI, the assistant and a real PayPal sandbox submission, run it local
 | **Evidence inspector** | Conflicts first, then gaps. Records appear as a timeline; anything that arrived after the assessment is marked **New**. |
 | **Respond to PayPal** | The exact payload: proof of delivery with carrier and tracking, plus the message. Approve and Submit are separate clicks. |
 | **Approval binding** | An approval covers one version of the case, records, draft and action, and expires after five minutes. Any change invalidates it. Before submitting, the server re-reads the PayPal dispute, checks it still accepts evidence and that its amount matches the case, records the attempt, then sends exactly once. |
+| **Live PayPal cases** (local) | The seller's real sandbox disputes load from PayPal, built from PayPal's own data: the disputed transaction, Seller Protection status, buyer messages and evidence already sent. PayPal doesn't know the seller's tracking for a plain payment, so the seller can add shipment details; they are shown to the AI as entered by the seller. |
+| **Autopilot** | Rules the seller switches on, with dollar limits: refund small claims with no shipment record, message the buyer first with the tracking, submit evidence when the records support it. A per-run refund budget caps the total. Decisions are plain code over the AI assessment, never the model's own call. Preview always comes first; Run does exactly what the preview showed, with a warning when real sandbox disputes would be touched. |
+| **Activity log** | An AG Grid table of every PayPal action, by the seller or the autopilot, real or simulated, with the rule that triggered it. |
 | **Assistant** (local, live AI) | A chat drawer on AG Studio's agent framework. Our Dispute agent reads cases and opens them on screen; for dashboard changes ("add a chart of disputed amount by due date") it hands off to AG Studio's built-in agents. It has no tool that can approve, submit or refund. |
 
 ## How PayPal is used
 
 PayPal Disputes API, sandbox only (the client has no live host):
 
-- `GET /v1/customer/disputes` and `GET /v1/customer/disputes/{id}` to read cases and the actions PayPal currently allows.
-- `POST /v1/customer/disputes/{id}/provide-evidence` with `PROOF_OF_FULFILLMENT` (carrier and tracking) and notes, sent only to the exact `provide_evidence` link PayPal advertises for that dispute.
-- The dispute is read back after submission and its new status is shown.
+- `GET /v1/customer/disputes` and `GET /v1/customer/disputes/{id}` to load live cases: transaction, Seller Protection, messages, evidence requests and the actions PayPal currently allows.
+- `POST .../provide-evidence` with `PROOF_OF_FULFILLMENT` (carrier and tracking) and notes.
+- `POST .../send-message` to message the buyer, `POST .../accept-claim` for a full refund, `POST .../make-offer` for a refund offer.
+- Every write, whether the seller clicked or the autopilot decided, takes the same path: record the attempt, re-read the dispute, check the amount matches and that PayPal currently advertises that action, send once, read the case back. A timeout leaves the case in **Needs reconciliation** and blocks further writes.
 
 We tested this end to end on a real sandbox dispute: PayPal accepted the evidence and moved the case to `UNDER_REVIEW`, then `WAITING_FOR_BUYER_RESPONSE`. An accepted submission is shown as **Evidence accepted by PayPal**, never as a won case.
 
@@ -99,12 +104,7 @@ Rerun `npm run gateway-key` when the key expires. Without a key the app falls ba
 1. In [PayPal Developer](https://developer.paypal.com/) (Sandbox), create a REST app for your sandbox **business** account and put its client ID and secret in `.env`.
 2. Sign in to [sandbox.paypal.com](https://www.sandbox.paypal.com/) as the sandbox **personal** account, send a payment to the business account as goods and services, and open an "item not received" dispute in the Resolution Center.
 3. `npm run probe list` shows the disputes the app can see; `npm run probe inspect <id>` shows the actions PayPal currently allows. New disputes can take a few minutes to appear.
-4. Link a scenario case to the dispute and allow writes, for example for a $40 dispute:
-   ```
-   SANDBOX_LINKS=SCN-1005:PP-R-XXX-00000000
-   ALLOW_SANDBOX_WRITES=true
-   ```
-   The server refuses to submit if the dispute's amount doesn't match the case.
+4. Start the app: your disputes appear in the case list tagged **Live PayPal**. Set `ALLOW_SANDBOX_WRITES=true` to let your clicks and the autopilot act on them; otherwise those actions are simulated. Open a dispute of $15 or less to see the autopilot refund one.
 
 **3. Start**
 
@@ -119,8 +119,8 @@ npm run dev   # http://localhost:5173
 | `ASTRO_GATEWAY_URL`, `ASTRO_GATEWAY_API_KEY` | AI Gateway. Filled by `npm run gateway-key`. |
 | `AI_MODE` | `live` or `saved`. Defaults to `live` when a key is set. |
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | Sandbox REST app. Optional. |
-| `SANDBOX_LINKS` | `CASE:DISPUTE` pairs linking scenario cases to real sandbox disputes. |
-| `ALLOW_SANDBOX_WRITES` | Real submissions happen only when `true`. Leave unset on a public deployment. |
+| `SANDBOX_LINKS` | Optional `CASE:DISPUTE` pairs linking demo cases to real sandbox disputes. Not needed for live cases. |
+| `ALLOW_SANDBOX_WRITES` | Real PayPal actions (evidence, messages, refunds) happen only when `true`. Leave unset on a public deployment. |
 | `STUDIO_AI_MODELS` | Models the assistant may use. Default `claude-opus-5-5`. |
 | `ASSESS_LIMIT`, `AI_LIMIT`, and their `_DAILY_` variants | Per-visitor and daily limits on AI use. |
 | `VITE_AG_STUDIO_LICENSE_KEY` | Optional. Without it AG Studio shows a watermark. |
