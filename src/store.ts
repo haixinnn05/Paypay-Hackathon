@@ -6,6 +6,7 @@ import { api, type CaseDetail, type QueueRow } from "./api.ts";
 
 interface State {
   merchantName: string;
+  live: { configured: boolean; sync: { at: string; error: string | null } | null };
   rows: QueueRow[];
   selectedId: string | null;
   detail: CaseDetail | null;
@@ -15,7 +16,7 @@ interface State {
   error: string | null;
 }
 
-let state: State = { merchantName: "", rows: [], selectedId: null, detail: null, focusedSource: null, busy: false, error: null };
+let state: State = { live: { configured: false, sync: null }, merchantName: "", rows: [], selectedId: null, detail: null, focusedSource: null, busy: false, error: null };
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<State>) {
@@ -25,7 +26,7 @@ function set(patch: Partial<State>) {
 
 async function refresh() {
   const s = await api.scenario();
-  set({ merchantName: s.merchant.name, rows: s.cases });
+  set({ merchantName: s.merchant.name, rows: s.cases, live: s.live });
   // ?case=SCN-1002 opens a specific case, which is handy for demos and screenshots.
   const fromUrl = new URLSearchParams(location.search).get("case");
   const id = state.selectedId ?? s.cases.find((c) => c.caseId === fromUrl)?.caseId ?? s.cases[0]?.caseId ?? null;
@@ -66,6 +67,19 @@ export const store = {
   approve: (digest: string) => run((id) => api.approve(id, digest)),
   submit: (digest: string) => run((id) => api.submit(id, digest)),
   refreshPaypal: () => run(api.refreshPaypal),
+  addShipment: (body: Parameters<typeof api.addShipment>[1]) => run((id) => api.addShipment(id, body)),
+  async syncLive() {
+    if (state.busy) return;
+    set({ busy: true, error: null });
+    try {
+      await api.syncLive();
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err) });
+    } finally {
+      await refresh().catch(() => {});
+      set({ busy: false });
+    }
+  },
   async reset() {
     await api.reset();
     set({ selectedId: null, detail: null, focusedSource: null, error: null });

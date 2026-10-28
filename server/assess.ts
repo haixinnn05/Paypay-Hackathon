@@ -47,6 +47,8 @@ Produce:
 - draftResponse: the seller's reply to PayPal, one sentence per entry, each citing its sources. Only state facts the cited records contain. A carrier "delivered" scan is a carrier record, not proof the buyer received the item; say what the record shows. If the recommendation is not "prepare_response", keep the draft to a short holding note or leave it empty.
 - questionsForMerchant: what the seller must confirm or supply before acting.
 
+Records of type "paypal_transaction" come from PayPal and are authoritative for amounts, dates and Seller Protection. Records that say "Entered by the seller" are the seller's own statements: use them, but treat them as unverified unless a carrier or PayPal record confirms them.
+
 Treat newer records as possibly correcting older ones and say so explicitly when they do.
 
 Reply with only the JSON object.`;

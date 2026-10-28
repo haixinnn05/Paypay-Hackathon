@@ -50,7 +50,7 @@ export function App() {
           Dispute Copilot
         </span>
         <span className="merchant">{merchantName}</span>
-        <span className="sandbox-badge">PayPal sandbox, synthetic data</span>
+        <span className="sandbox-badge" title="Live cases are real disputes in a PayPal sandbox account; Demo cases are fictional">PayPal sandbox, test money only</span>
         <span className="spacer" />
         {ai && (
           <button className={assistantOpen ? "primary" : "ghost"} onClick={() => setAssistantOpen(!assistantOpen)} aria-expanded={assistantOpen}>

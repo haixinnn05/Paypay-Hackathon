@@ -38,9 +38,21 @@ export interface DisputeDetail extends DisputeSummary {
     seller_transaction_id?: string;
     buyer_transaction_id?: string;
     invoice_number?: string;
+    create_time?: string;
+    transaction_status?: string;
     gross_amount?: { currency_code: string; value: string };
+    buyer?: { name?: string };
+    items?: Array<{ item_name?: string; item_description?: string; item_quantity?: string }>;
+    seller_protection_eligible?: boolean;
+    seller_protection_type?: string;
   }>;
-  evidences?: unknown[];
+  messages?: Array<{ posted_by?: string; time_posted?: string; content?: string }>;
+  evidences?: Array<{ evidence_type?: string; source?: string; notes?: string; date?: string }>;
+  refund_details?: { allowed_refund_amount?: { currency_code: string; value: string } };
+  allowed_response_options?: {
+    accept_claim?: { accept_claim_types?: string[] };
+    make_offer?: { offer_types?: string[] };
+  };
   offer?: unknown;
 }
 
@@ -93,12 +105,16 @@ export interface FulfillmentEvidence {
   notes: string;
 }
 
-/** The provide-evidence link PayPal currently advertises for this dispute, or null if it offers none. */
-export function evidenceLink(d: DisputeDetail): DisputeLink | null {
-  const link = d.links?.find((l) => l.rel === "provide_evidence" && l.method === "POST");
-  const expected = `${BASE}/v1/customer/disputes/${encodeURIComponent(d.dispute_id)}/provide-evidence`;
+export type DisputeAction = "provide_evidence" | "send_message" | "make_offer" | "accept_claim";
+
+/** The link PayPal currently advertises for this action on this dispute, or null if it offers none. */
+export function actionLink(d: DisputeDetail, rel: DisputeAction): DisputeLink | null {
+  const link = d.links?.find((l) => l.rel === rel && l.method === "POST");
+  const expected = `${BASE}/v1/customer/disputes/${encodeURIComponent(d.dispute_id)}/${rel.replace("_", "-")}`;
   return link && link.href === expected ? link : null;
 }
+
+export const evidenceLink = (d: DisputeDetail) => actionLink(d, "provide_evidence");
 
 export function evidenceInput(e: FulfillmentEvidence) {
   return {
@@ -113,18 +129,17 @@ export function evidenceInput(e: FulfillmentEvidence) {
 }
 
 /**
- * POSTs evidence to the exact link PayPal advertised. PayPal expects multipart/form-data with a JSON part
- * named "input"; it is built by hand because FormData would add a filename to that part.
+ * POSTs to the exact link PayPal advertised. Most dispute actions take multipart/form-data with a JSON
+ * part named "input"; it is built by hand because FormData would add a filename to that part.
  */
-export async function provideEvidence(link: DisputeLink, e: FulfillmentEvidence, signal?: AbortSignal): Promise<unknown> {
+async function postInput(link: DisputeLink, input: unknown, signal?: AbortSignal): Promise<unknown> {
   const boundary = `----dispute-copilot-${crypto.randomUUID()}`;
   const body =
     `--${boundary}\r\n` +
     `Content-Disposition: form-data; name="input"\r\n` +
     `Content-Type: application/json\r\n\r\n` +
-    `${JSON.stringify(evidenceInput(e))}\r\n` +
+    `${JSON.stringify(input)}\r\n` +
     `--${boundary}--\r\n`;
-
   const res = await fetch(link.href, {
     method: "POST",
     headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": `multipart/form-data; boundary=${boundary}` },
@@ -132,6 +147,29 @@ export async function provideEvidence(link: DisputeLink, e: FulfillmentEvidence,
     signal,
   });
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw toError("Provide evidence", res, json);
+  if (!res.ok) throw toError(link.rel, res, json);
   return json;
 }
+
+async function postJson(link: DisputeLink, input: unknown, signal?: AbortSignal): Promise<unknown> {
+  const res = await fetch(link.href, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    signal,
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw toError(link.rel, res, json);
+  return json;
+}
+
+export const provideEvidence = (link: DisputeLink, e: FulfillmentEvidence, signal?: AbortSignal) => postInput(link, evidenceInput(e), signal);
+
+export const sendMessage = (link: DisputeLink, message: string, signal?: AbortSignal) => postInput(link, { message }, signal);
+
+/** Full refund, closing the dispute in the buyer's favour. PayPal moves the money. */
+export const acceptClaimRefund = (link: DisputeLink, note: string, signal?: AbortSignal) =>
+  postInput(link, { note, accept_claim_type: "REFUND" }, signal);
+
+export const makeRefundOffer = (link: DisputeLink, note: string, amount: { value: string; currency: string }, signal?: AbortSignal) =>
+  postJson(link, { note, offer_type: "REFUND", offer_amount: { currency_code: amount.currency, value: amount.value } }, signal);

@@ -246,3 +246,19 @@ button.icon { padding: 7px; }
 }
 
 .dc-paypal-status { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--dc-gridline); }
+
+/* Live vs demo cases */
+.dc-source-tag { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--dc-border); color: var(--dc-muted); white-space: nowrap; }
+.dc-source-tag.paypal { border-color: rgba(52, 81, 209, 0.35); color: var(--dc-accent); background: var(--dc-accent-soft); }
+.dc-sync { display: flex; justify-content: space-between; align-items: center; margin: -6px 0 12px; }
+.dc-sync button { display: inline-flex; gap: 4px; }
+
+/* Forms */
+.dc-form { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--dc-glass-edge); border-radius: var(--dc-radius); background: var(--dc-solid); display: grid; gap: 10px; }
+.dc-form label { display: grid; gap: 4px; font-size: 13px; font-weight: 500; }
+.dc-form input, .dc-form select { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: var(--dc-radius); border: 1px solid var(--dc-border); background: #fff; color: var(--dc-ink); }
+.dc-form input::placeholder { color: var(--dc-muted); }
+.dc-form input:focus, .dc-form select:focus { outline: 2px solid var(--dc-accent); outline-offset: 0; }
+.dc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dc-form .dc-actions { margin: 4px 0 0; }
+.dc-add-shipment { margin-top: 12px; display: inline-flex; gap: 4px; }

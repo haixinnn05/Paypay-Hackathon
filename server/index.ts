@@ -1,12 +1,14 @@
 import express, { type Response } from "express";
 import { existsSync } from "node:fs";
 import { env, paypalConfigured } from "./env.ts";
-import { ActionError, approvalState, approve, attemptsFor, buildProposal, isBlocker, linkedDispute, resetSimulatedAttempts, submit } from "./actions.ts";
+import { ActionError, approvalState, approve, attemptsFor, buildProposal, isBlocker, linkedDispute, resetSimulatedAttempts, submit, type Attempt } from "./actions.ts";
+import { allCases, findAny, type AnyCase } from "./cases.ts";
+import { addShipment, liveSyncState, refreshLive, syncLive } from "./live.ts";
 import { assessCase, type AssessmentResult } from "./assess.ts";
 import { rateLimit } from "./limit.ts";
 import { getDispute, listDisputes, PayPalError } from "./paypal.ts";
 import { findSaved } from "./saved.ts";
-import { advanceCase, caseRevision, cases, findCase, merchant, resetScenario } from "./scenario.ts";
+import { advanceCase, caseRevision, merchant, resetScenario } from "./scenario.ts";
 
 const app = express();
 app.set("trust proxy", 1); // Render and similar hosts sit behind one proxy; needed for per-visitor limits.
@@ -32,21 +34,25 @@ function paypalObservation(caseId: string): { status: string; observedAt: string
 }
 
 /** For a case linked to a real sandbox dispute, the status PayPal last reported beats the fixture's. */
-function providerStatus(c: ReturnType<typeof cases>[number]): string {
+function providerStatus(c: AnyCase): string {
   return paypalObservation(c.caseId)?.status ?? c.providerStatus;
 }
 
-function queueRow(c: ReturnType<typeof cases>[number]) {
+const CLOSED_STEPS = new Set(["Evidence submitted", "Refunded", "Closed by PayPal", "Waiting for buyer", "Under PayPal review"]);
+
+function queueRow(c: AnyCase) {
   const a = assessments.get(c.caseId);
   const revision = caseRevision(c);
-  const lastAttempt = attemptsFor(c.caseId).at(-1)?.state ?? null;
-  const step = nextStep(a, revision, lastAttempt);
+  const last = attemptsFor(c.caseId).findLast((t) => t.state !== "rejected");
+  const step = nextStep(a, revision, last, providerStatus(c));
   const daysLeft = (new Date(c.sellerResponseDue).getTime() - Date.now()) / 86_400_000;
+  const closed = CLOSED_STEPS.has(step);
   return {
+    source: c.source,
     nextStep: step,
-    needsAction: step === "Evidence submitted" ? 0 : 1,
-    answered: step === "Evidence submitted" ? 1 : 0,
-    dueThisWeek: step !== "Evidence submitted" && daysLeft <= 7 ? 1 : 0,
+    needsAction: closed ? 0 : 1,
+    answered: closed ? 1 : 0,
+    dueThisWeek: !closed && daysLeft <= 7 ? 1 : 0,
     caseId: c.caseId,
     orderRef: c.orderRef,
     buyer: c.buyerMasked,
@@ -58,16 +64,25 @@ function queueRow(c: ReturnType<typeof cases>[number]) {
     recommendation: a?.output.recommendation ?? null,
     assessmentState: !a ? "needs_assessment" : a.revision === revision ? "current" : "review_changed",
     approvalState: approvalState(c.caseId, buildProposal(c, a)).state,
-    lastAttempt,
+    lastAttempt: last?.state ?? null,
     linkedDispute: linkedDispute(c.caseId),
     revision,
   };
 }
 
 /** One plain-language label per case, used to group the queue and the dashboard charts. */
-function nextStep(a: AssessmentResult | undefined, revision: string, lastAttempt: string | null): string {
-  if (lastAttempt === "needs_reconciliation") return "Reconcile in PayPal";
-  if (lastAttempt === "evidence_accepted" || lastAttempt === "simulated") return "Evidence submitted";
+function nextStep(a: AssessmentResult | undefined, revision: string, last: Attempt | undefined, status: string): string {
+  if (last?.state === "needs_reconciliation") return "Reconcile in PayPal";
+  const kind = last?.kind ?? "evidence";
+  const happened = last && (last.state === "evidence_accepted" || last.state === "done" || last.state === "simulated");
+  if (happened && kind === "refund") return "Refunded";
+  if (happened && kind === "evidence") return "Evidence submitted";
+  if (status === "RESOLVED") return "Closed by PayPal";
+  // A live dispute that isn't waiting on the seller has nothing for the seller to do right now.
+  if (status === "WAITING_FOR_BUYER_RESPONSE") return "Waiting for buyer";
+  if (status === "UNDER_REVIEW") return "Under PayPal review";
+  if (happened && kind === "offer") return "Refund offered";
+  if (happened && kind === "message" && (!a || a.revision === revision)) return "Buyer messaged";
   if (!a) return "Needs assessment";
   if (a.revision !== revision) return "Review changed";
   return { prepare_response: "Prepare response", review_remedy: "Review remedy", need_more_information: "Need more information" }[
@@ -76,17 +91,41 @@ function nextStep(a: AssessmentResult | undefined, revision: string, lastAttempt
 }
 
 app.get("/api/scenario", (_req, res) => {
-  res.json({ merchant: merchant(), cases: cases().map(queueRow) });
+  res.json({ merchant: merchant(), cases: allCases().map(queueRow), live: { configured: paypalConfigured(), sync: liveSyncState() } });
+});
+
+// Re-read every dispute in the merchant's PayPal sandbox account.
+app.post("/api/live/sync", async (_req, res) => {
+  if (!paypalConfigured()) return res.status(503).json({ error: "PayPal isn't configured on this deployment." });
+  await syncLive();
+  res.json(liveSyncState());
+});
+
+// Seller-entered shipment details for a live case (PayPal doesn't know the seller's tracking for a plain payment).
+app.post("/api/cases/:id/shipment", (req, res) => {
+  const c = findAny(String(req.params.id));
+  if (!c || c.source !== "paypal") return res.status(404).json({ error: "Shipment details can be added to live PayPal cases only." });
+  const { carrier, trackingNumber, shippedOn, carrierStatus } = req.body ?? {};
+  const CARRIERS = ["USPS", "UPS", "FEDEX", "DHL", "OTHER"];
+  if (!CARRIERS.includes(carrier)) return res.status(400).json({ error: `Carrier must be one of ${CARRIERS.join(", ")}.` });
+  if (!/^[A-Za-z0-9]{8,40}$/.test(String(trackingNumber ?? ""))) return res.status(400).json({ error: "Tracking number should be 8 to 40 letters and digits." });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(shippedOn ?? ""))) return res.status(400).json({ error: "Shipped date should look like 2026-10-20." });
+  addShipment(c.caseId, { carrier, trackingNumber: String(trackingNumber).toUpperCase(), shippedOn, carrierStatus: carrierStatus ? String(carrierStatus).slice(0, 300) : undefined });
+  res.json({ ok: true });
 });
 
 app.get("/api/cases/:id", (req, res) => {
-  const c = findCase(req.params.id);
+  const c = findAny(String(req.params.id));
   if (!c) return res.status(404).json({ error: "Unknown case" });
   const { pendingSources, ...rest } = c;
+  // live is internal sync metadata; the client gets the parts it needs below.
+  const { live: liveMeta, ...shown } = rest as typeof rest & { live?: unknown };
   const assessment = assessments.get(c.caseId);
   const proposal = buildProposal(c, assessment);
   res.json({
-    ...rest,
+    ...shown,
+    allowedActions: c.source === "paypal" ? c.live.allowed : null,
+    sellerProtection: c.source === "paypal" ? c.live.sellerProtection : null,
     providerStatus: providerStatus(c),
     revision: caseRevision(c),
     hasPendingRecords: pendingSources.length > 0,
@@ -101,13 +140,13 @@ app.get("/api/cases/:id", (req, res) => {
 
 // Re-read the linked sandbox dispute so the case shows what PayPal says now.
 app.post("/api/cases/:id/refresh", async (req, res) => {
-  const c = findCase(String(req.params.id));
+  const c = findAny(String(req.params.id));
   if (!c) return res.status(404).json({ error: "Unknown case" });
   const disputeId = linkedDispute(c.caseId);
   if (!disputeId) return res.status(409).json({ error: "This case isn't linked to a PayPal dispute." });
   if (!paypalConfigured()) return res.status(503).json({ error: "PayPal isn't configured on this deployment." });
   try {
-    const d = await getDispute(disputeId);
+    const d = c.source === "paypal" ? (await refreshLive(c.caseId))!.live : await getDispute(disputeId);
     const seen = { status: d.status, observedAt: new Date().toISOString() };
     observed.set(c.caseId, seen);
     res.json(seen);
@@ -117,7 +156,7 @@ app.post("/api/cases/:id/refresh", async (req, res) => {
 });
 
 app.post("/api/cases/:id/approve", (req, res) => {
-  const c = findCase(req.params.id);
+  const c = findAny(String(req.params.id));
   if (!c) return res.status(404).json({ error: "Unknown case" });
   const proposal = buildProposal(c, assessments.get(c.caseId));
   if (isBlocker(proposal)) return res.status(409).json({ error: proposal.reason });
@@ -129,7 +168,7 @@ app.post("/api/cases/:id/approve", (req, res) => {
 });
 
 app.post("/api/cases/:id/submit", async (req, res) => {
-  const c = findCase(req.params.id);
+  const c = findAny(String(req.params.id));
   if (!c) return res.status(404).json({ error: "Unknown case" });
   try {
     res.json(await submit(c.caseId, buildProposal(c, assessments.get(c.caseId)), String(req.body?.digest ?? "")));
@@ -139,7 +178,7 @@ app.post("/api/cases/:id/submit", async (req, res) => {
 });
 
 app.post("/api/cases/:id/assess", assessLimit, async (req, res) => {
-  const c = findCase(String(req.params.id));
+  const c = findAny(String(req.params.id));
   if (!c) return res.status(404).json({ error: "Unknown case" });
   if (env.aiMode === "saved") {
     const saved = findSaved(c.caseId, caseRevision(c));
@@ -158,7 +197,7 @@ app.post("/api/cases/:id/assess", assessLimit, async (req, res) => {
 
 // Scenario only: simulate a newly synced record arriving for a case.
 app.post("/api/cases/:id/advance", (req, res) => {
-  const added = advanceCase(req.params.id);
+  const added = advanceCase(String(req.params.id));
   if (!added) return res.status(409).json({ error: "No pending records for this case" });
   res.json({ added });
 });
@@ -240,4 +279,10 @@ if (env.production && existsSync("dist")) {
   app.get("/{*path}", (_req, res) => res.sendFile("index.html", { root: "dist" }));
 }
 
-app.listen(env.port, () => console.log(`Dispute Copilot API on http://localhost:${env.port}`));
+app.listen(env.port, () => {
+  console.log(`Dispute Copilot API on http://localhost:${env.port}`);
+  syncLive().then(() => {
+    const s = liveSyncState();
+    if (s) console.log(s.error ? `PayPal sync failed: ${s.error}` : "PayPal sandbox disputes synced");
+  });
+});

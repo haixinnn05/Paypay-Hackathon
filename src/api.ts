@@ -1,4 +1,5 @@
 export interface QueueRow {
+  source: "paypal" | "scenario";
   caseId: string;
   orderRef: string;
   buyer: string;
@@ -55,9 +56,13 @@ export interface Proposal {
 
 export interface Attempt {
   id: string;
+  kind?: "evidence" | "message" | "refund" | "offer";
+  by?: "seller" | "autopilot";
+  rule?: string;
+  summary?: string;
   digest: string;
   target: Proposal["target"];
-  state: "submitting" | "evidence_accepted" | "simulated" | "rejected" | "needs_reconciliation";
+  state: "submitting" | "evidence_accepted" | "done" | "simulated" | "rejected" | "needs_reconciliation";
   startedAt: string;
   error?: string;
   debugId?: string | null;
@@ -65,6 +70,9 @@ export interface Attempt {
 }
 
 export interface CaseDetail {
+  source: "paypal" | "scenario";
+  allowedActions: string[] | null;
+  sellerProtection: string | null;
   caseId: string;
   reason: string;
   providerStatus: string;
@@ -96,7 +104,12 @@ const post = (path: string, body: unknown) =>
   call<unknown>(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 export const api = {
-  scenario: () => call<{ merchant: { name: string; note: string }; cases: QueueRow[] }>("/api/scenario"),
+  scenario: () =>
+    call<{ merchant: { name: string; note: string }; cases: QueueRow[]; live: { configured: boolean; sync: { at: string; error: string | null } | null } }>(
+      "/api/scenario",
+    ),
+  syncLive: () => post("/api/live/sync", {}),
+  addShipment: (id: string, body: { carrier: string; trackingNumber: string; shippedOn: string; carrierStatus?: string }) => post(`/api/cases/${id}/shipment`, body),
   caseDetail: (id: string) => call<CaseDetail>(`/api/cases/${id}`),
   assess: (id: string) => call<Assessment>(`/api/cases/${id}/assess`, { method: "POST" }),
   advance: (id: string) => call<{ added: Source }>(`/api/cases/${id}/advance`, { method: "POST" }),

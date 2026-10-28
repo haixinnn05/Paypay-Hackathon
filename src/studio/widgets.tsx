@@ -1,9 +1,11 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import type { AgDefaultRegistry, AgDefaultWidgetDefinition, AgWidgetApi, AgWidgetData, AgWidgetDataFormat, AgWidgetParams, AgWidgetsConfig } from "ag-studio";
 import { createWidgets, type AgWidgetDefinition } from "ag-studio-react";
 import {
   ArrowClockwise,
+  ArrowsClockwise,
   ArrowUUpLeft,
+  CreditCard,
   ChatText,
   CheckCircle,
   CircleNotch,
@@ -68,6 +70,12 @@ const STEP_TONE: Record<string, string> = {
   "Review changed": "alert",
   "Reconcile in PayPal": "alert",
   "Needs assessment": "neutral",
+  Refunded: "good",
+  "Refund offered": "accent",
+  "Buyer messaged": "accent",
+  "Waiting for buyer": "neutral",
+  "Under PayPal review": "neutral",
+  "Closed by PayPal": "neutral",
 };
 
 // --- Case queue -----------------------------------------------------------------------
@@ -95,6 +103,7 @@ function CaseQueue(params: Params<"case-queue">) {
         <h3>Cases</h3>
         <span className="dc-small dc-muted">{open} open</span>
       </div>
+      <LiveSync />
       {groups.map(([label, items], i) => (
         <section key={label} className="dc-queue-group">
           <div className="dc-section-label" style={i === 0 ? { marginTop: 4 } : undefined}>
@@ -107,6 +116,26 @@ function CaseQueue(params: Params<"case-queue">) {
           </ul>
         </section>
       ))}
+    </div>
+  );
+}
+
+function LiveSync() {
+  const live = useStore((s) => s.live);
+  const busy = useStore((s) => s.busy);
+  if (!live.configured) return null;
+  return (
+    <div className="dc-sync">
+      <span className="dc-small dc-muted">
+        {live.sync?.error
+          ? "PayPal sync failed"
+          : live.sync
+            ? `PayPal synced ${new Date(live.sync.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+            : "Not synced yet"}
+      </span>
+      <button className="link" disabled={busy} onClick={store.syncLive}>
+        <ArrowsClockwise size={13} /> Sync from PayPal
+      </button>
     </div>
   );
 }
@@ -131,11 +160,9 @@ function QueueItem({ row, selected }: { row: QueueRow; selected: boolean }) {
         </span>
         <span className="dc-row">
           <span className={`dc-chip ${STEP_TONE[row.nextStep] ?? "neutral"}`}>{row.nextStep}</span>
-          {row.linkedDispute && (
-            <span className="dc-small dc-muted" title={`Linked to PayPal sandbox dispute ${row.linkedDispute}`}>
-              PayPal sandbox
-            </span>
-          )}
+          <span className={`dc-source-tag ${row.source}`} title={row.source === "paypal" ? "A real dispute in your PayPal sandbox account" : "A fictional demo case"}>
+            {row.source === "paypal" ? "Live PayPal" : "Demo"}
+          </span>
         </span>
       </button>
     </li>
@@ -163,6 +190,7 @@ const SOURCE: Record<string, { icon: Icon; label: string }> = {
   carrier_event: { icon: MapPin, label: "Carrier update" },
   message: { icon: ChatText, label: "Message" },
   refund: { icon: ArrowUUpLeft, label: "Refund" },
+  paypal_transaction: { icon: CreditCard, label: "PayPal transaction" },
 };
 
 function EvidenceInspector(params: Params<"evidence-inspector">) {
@@ -200,6 +228,11 @@ function EvidenceInspector(params: Params<"evidence-inspector">) {
         <span className="dc-small dc-muted">The buyer says</span>
         <p>{detail.buyerClaim}</p>
       </blockquote>
+      {detail.sellerProtection && (
+        <p className="dc-small dc-muted dc-inline">
+          <SealCheck size={14} /> PayPal Seller Protection: {detail.sellerProtection.replace(/_/g, " ").toLowerCase()}
+        </p>
+      )}
 
       <div className="dc-actions">
         <button className={!a || stale ? "primary" : "ghost"} disabled={busy} onClick={store.assess}>
@@ -280,8 +313,75 @@ function EvidenceInspector(params: Params<"evidence-inspector">) {
             <TimelineEvent key={s.id} source={s} focused={focused === s.id} isNew={newIds.has(s.id)} />
           ))}
       </ol>
-      <p className="dc-small dc-muted">All records in this scenario are synthetic.</p>
+      {detail.source === "paypal" && <ShipmentForm hasShipment={detail.sources.some((x) => x.type === "shipment")} busy={busy} />}
+      <p className="dc-small dc-muted">
+        {detail.source === "paypal"
+          ? "Records from your PayPal sandbox account, plus anything you entered."
+          : "All records in this demo case are synthetic."}
+      </p>
     </div>
+  );
+}
+
+function ShipmentForm({ hasShipment, busy }: { hasShipment: boolean; busy: boolean }) {
+  const [open, setOpen] = useState(!hasShipment);
+  const [form, setForm] = useState({ carrier: "USPS", trackingNumber: "", shippedOn: new Date().toISOString().slice(0, 10), carrierStatus: "" });
+  if (!open)
+    return (
+      <button className="link dc-add-shipment" onClick={() => setOpen(true)}>
+        <Plus size={13} /> Add another shipment
+      </button>
+    );
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value });
+  return (
+    <form
+      className="dc-form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        await store.addShipment(form);
+        setForm({ ...form, trackingNumber: "", carrierStatus: "" });
+        if (hasShipment) setOpen(false);
+      }}
+    >
+      <div className="dc-section-label" style={{ marginTop: 0 }}>
+        {hasShipment ? "Add another shipment" : "Add shipment details"}
+      </div>
+      <p className="dc-small dc-muted" style={{ margin: "0 0 10px" }}>
+        PayPal doesn't know your tracking for this payment. Add it here; it's shown to the AI as entered by you.
+      </p>
+      <div className="dc-form-row">
+        <label>
+          Carrier
+          <select value={form.carrier} onChange={set("carrier")}>
+            {["USPS", "UPS", "FEDEX", "DHL", "OTHER"].map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Shipped on
+          <input type="date" value={form.shippedOn} onChange={set("shippedOn")} required />
+        </label>
+      </div>
+      <label>
+        Tracking number
+        <input value={form.trackingNumber} onChange={set("trackingNumber")} placeholder="9400111899223397654321" required minLength={8} />
+      </label>
+      <label>
+        What the carrier shows <span className="dc-muted">(optional)</span>
+        <input value={form.carrierStatus} onChange={set("carrierStatus")} placeholder="Delivered, in mailbox, Oct 19, photo available" />
+      </label>
+      <div className="dc-actions">
+        <button className="primary" disabled={busy || form.trackingNumber.length < 8}>
+          Save shipment
+        </button>
+        {hasShipment && (
+          <button type="button" className="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </button>
+        )}
+      </div>
+    </form>
   );
 }
 
@@ -366,13 +466,29 @@ function Cites({ ids, focused }: { ids: string[]; focused: string | null }) {
 
 // --- Action review ----------------------------------------------------------------------
 
-const ATTEMPT: Record<Attempt["state"], { label: string; icon: Icon }> = {
-  submitting: { label: "Sending to PayPal", icon: CircleNotch },
-  evidence_accepted: { label: "PayPal accepted the evidence", icon: SealCheck },
-  simulated: { label: "Simulated: nothing was sent to PayPal", icon: Info },
-  rejected: { label: "Not sent", icon: XCircle },
-  needs_reconciliation: { label: "Outcome unknown. Check the case in PayPal before doing anything else.", icon: Warning },
+const KIND_DONE: Record<NonNullable<Attempt["kind"]>, string> = {
+  evidence: "PayPal accepted the evidence",
+  message: "Message sent to the buyer through PayPal",
+  refund: "Refunded in full through PayPal",
+  offer: "Refund offer sent through PayPal",
 };
+
+function attemptLabel(a: Attempt): { label: string; icon: Icon } {
+  const kind = a.kind ?? "evidence";
+  switch (a.state) {
+    case "submitting":
+      return { label: "Sending to PayPal", icon: CircleNotch };
+    case "evidence_accepted":
+    case "done":
+      return { label: KIND_DONE[kind], icon: SealCheck };
+    case "simulated":
+      return { label: `Simulated (${kind === "evidence" ? "evidence" : kind}): nothing was sent to PayPal`, icon: Info };
+    case "rejected":
+      return { label: "Not sent", icon: XCircle };
+    case "needs_reconciliation":
+      return { label: "Outcome unknown. Check the case in PayPal before doing anything else.", icon: Warning };
+  }
+}
 
 function ActionReview(params: Params<"action-review">) {
   useDisplayed(params);
@@ -383,7 +499,7 @@ function ActionReview(params: Params<"action-review">) {
 
   const { proposal, approval, attempts, assessment } = detail;
   const last = attempts.at(-1);
-  const sent = last?.state === "evidence_accepted" || last?.state === "simulated";
+  const sent = last?.state === "evidence_accepted" || last?.state === "done" || last?.state === "simulated";
   const assessed = Boolean(assessment && assessment.revision === detail.revision);
   const approved = approval.state === "approved";
   const stage = sent ? 3 : approved ? 2 : assessed ? 1 : 0;
@@ -511,13 +627,19 @@ function PaypalStatus({ paypal, busy }: { paypal: NonNullable<CaseDetail["paypal
 }
 
 function Receipt({ attempt }: { attempt: Attempt }) {
-  const { label, icon: IconFor } = ATTEMPT[attempt.state];
+  const { label, icon: IconFor } = attemptLabel(attempt);
   return (
     <div className={`dc-receipt ${attempt.state}`}>
       <strong className="dc-inline">
         <IconFor size={16} weight="fill" className={attempt.state === "submitting" ? "dc-spin" : undefined} />
         {label}
       </strong>
+      {(attempt.by === "autopilot" || attempt.summary) && (
+        <p className="dc-small">
+          {attempt.by === "autopilot" ? `Autopilot${attempt.rule ? `, rule: ${attempt.rule}` : ""}. ` : ""}
+          {attempt.summary}
+        </p>
+      )}
       {attempt.readBack &&
         ("error" in attempt.readBack ? (
           <p className="dc-error">Couldn't read the case back: {attempt.readBack.error}</p>

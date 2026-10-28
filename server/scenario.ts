@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 export interface Source {
   id: string;
-  type: "order" | "shipment" | "carrier_event" | "message" | "refund";
+  type: "order" | "shipment" | "carrier_event" | "message" | "refund" | "paypal_transaction";
   recordedAt: string;
   content: string;
   /** Structured values the action layer may use; the model only ever sees `content`. */
