@@ -13,7 +13,8 @@
     "probe": "tsx scripts/probe.ts",
     "typecheck": "tsc --noEmit",
     "gateway-key": "bash scripts/gateway-dev-key.sh",
-    "save-assessments": "tsx scripts/save-assessments.ts"
+    "save-assessments": "tsx scripts/save-assessments.ts",
+    "eval": "tsx eval/run.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

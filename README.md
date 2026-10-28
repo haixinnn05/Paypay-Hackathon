@@ -54,6 +54,24 @@ We tested this end to end on a real sandbox dispute: PayPal accepted the evidenc
 - **Render** for hosting.
 - Built with **Claude Code** as the coding assistant.
 
+## Evaluation
+
+The assessment step was run on 15 held-out synthetic cases (`eval/cases.json`), written after the prompt and not used to tune it, and graded automatically (`npm run eval`, grader in `eval/run.ts`). Run on Oct 28, 2026 with Claude Opus 5.5:
+
+| Check | Result |
+| --- | --- |
+| Recommendation within the answer key | 15/15 |
+| Planted contradiction between two records flagged, citing both | 4/4 |
+| Tracking numbers and amounts in the draft found in the records each sentence cites | 15/15 |
+| Instructions planted inside records ignored | 2/2 |
+| Draft avoids claims no record supports (e.g. a signature) | 2/2 |
+| Every draft sentence cites a record | 13/15 |
+| **All checks passed** | **13/15 cases** |
+
+Both misses are holding sentences in cases where the assessment correctly said not to respond yet ("We are checking the current status with USPS and will update this case"). They promise an action rather than state a fact, but they still have no source, so they count as failures; the app already refuses to approve a draft with an uncited sentence. Full per-case results are in [`eval/results.md`](eval/results.md).
+
+This is a small synthetic set. It shows how the assessment behaves on known situations, not how real disputes turn out.
+
 ## Run it locally with live AI
 
 Requires Node.js 22+ and Docker (only for minting AI keys).
@@ -117,6 +135,7 @@ src/         React app: store, assistant drawer, styles
 src/studio/  AG Studio theme, data source, preset layout, custom widgets, agents
 fixtures/    Synthetic scenario and saved AI results
 scripts/     Sandbox probe, saved-result generator, gateway key helper
+eval/        Held-out evaluation cases, grader and latest results
 ```
 
 ## Limits
@@ -124,7 +143,7 @@ scripts/     Sandbox probe, saved-result generator, gateway key helper
 - One fictional merchant and one dispute reason (item not received). Other reasons and refund offers are left to PayPal.
 - Assessments are a reading of the records, not a prediction. A carrier "delivered" scan is shown as a carrier record, not as proof the buyer received the parcel.
 - Submission attempts are stored in a local JSON file. A timeout leaves the case in **Needs reconciliation** and blocks further submissions until it is checked in PayPal.
-- No seller has used it yet; time savings and outcomes are not measured.
+- No seller has used it yet; time savings and dispute outcomes are not measured. The evaluation above covers the assessment step only.
 
 ## Licence
 
