@@ -1,0 +1,683 @@
+{
+  "SCN-1001@4c47413f34565001": {
+    "caseId": "SCN-1001",
+    "revision": "4c47413f34565001",
+    "model": "global.anthropic.claude-opus-5-5",
+    "createdAt": "2026-10-28T18:49:43.723Z",
+    "output": {
+      "recommendation": "prepare_response",
+      "summary": "The buyer ordered a speckled mug set for $84.00 on Oct 2, and a USPS label was created Oct 3. USPS recorded the package as delivered to the front door/porch in Portland, OR 97214 on Oct 7. That supports a response to PayPal, due by Nov 6, but the scan shows only what USPS recorded, not that the buyer actually got the package.",
+      "findings": [
+        {
+          "kind": "supported",
+          "statement": "Order FH-20417 was a speckled mug set (4) for $84.00 USD, matching the disputed amount, to ship to Portland, OR 97214.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "A USPS shipment with tracking 9400111899223344556677 was recorded for order FH-20417, with the label created Oct 3.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "USPS recorded tracking 9400111899223344556677 as delivered to the front door/porch in Portland, OR 97214 on Oct 7. The city and ZIP match the order's ship-to.",
+          "sourceIds": [
+            "S1",
+            "S2",
+            "S3"
+          ]
+        },
+        {
+          "kind": "missing",
+          "statement": "The records show only city and ZIP, not the full street address, so it can't be confirmed that USPS delivered to the buyer's exact address.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "There is no signature, delivery photo or GPS proof of delivery. The 'delivered' scan is the carrier's record, not proof the buyer received the item.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "There are no records of messages with the buyer, refunds or reshipments for this order.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "Apart from the label-created entry, there is no USPS acceptance or in-transit scan. Only the final delivery event is on record.",
+          "sourceIds": []
+        }
+      ],
+      "draftResponse": [
+        {
+          "sentence": "Order FH-20417, a speckled mug set (4) totaling $84.00 USD, was placed on Oct 2 for shipment to Portland, OR 97214.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "sentence": "The order was shipped via USPS with tracking number 9400111899223344556677, and the shipping label was created on Oct 3.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "sentence": "USPS tracking for 9400111899223344556677 shows the package as delivered to the front door/porch in Portland, OR 97214 on Oct 7, matching the order's shipping city and ZIP code.",
+          "sourceIds": [
+            "S1",
+            "S3"
+          ]
+        }
+      ],
+      "questionsForMerchant": [
+        "Does the full street address on the USPS label match the ship-to address the buyer gave on order FH-20417?",
+        "Has the buyer contacted you about this order, and have you issued any refund, partial refund or replacement?",
+        "Do you have a USPS delivery photo, a shipping receipt or an acceptance scan you can attach?",
+        "Did the package contain all four mugs, and do you have a record of its weight or contents?"
+      ]
+    },
+    "assessedSourceIds": [
+      "S1",
+      "S2",
+      "S3"
+    ],
+    "validation": {
+      "unknownSourceIds": [],
+      "uncitedDraftSentences": 0
+    },
+    "savedAt": "2026-10-28T18:51:17.951Z"
+  },
+  "SCN-1002@f5eae2c9aaa075e5": {
+    "caseId": "SCN-1002",
+    "revision": "f5eae2c9aaa075e5",
+    "model": "global.anthropic.claude-opus-5-5",
+    "createdAt": "2026-10-28T18:50:00.889Z",
+    "output": {
+      "recommendation": "prepare_response",
+      "summary": "The buyer says the $142.50 order FH-20452 (bowl + 2 platters) never arrived. UPS tracking on the label created for this order shows it was delivered in Austin, TX 78704 on Oct 14, which matches the order's city and ZIP. You can respond before Nov 3 with this tracking, but the records don't show the full street address, a signature or proof-of-delivery photo, or that all three items were in the parcel.",
+      "findings": [
+        {
+          "kind": "supported",
+          "statement": "Order FH-20452 was for a large serving bowl and 2 platters, total $142.50 USD, PayPal capture 3MN88310CD, shipping to Austin, TX 78704. This matches the disputed amount.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "A UPS shipment with tracking 1Z999AA10123456784 was recorded for order FH-20452, with the label created Oct 10.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "UPS recorded that tracking 1Z999AA10123456784 was delivered in Austin, TX 78704 on Oct 14 at 5:31 pm local time. The city and ZIP match the order's ship-to. This is a carrier scan, not proof the buyer personally received the parcel.",
+          "sourceIds": [
+            "S1",
+            "S2",
+            "S3"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "On Oct 16 the seller told the buyer the parcel showed as delivered and suggested checking with the building's front desk. No buyer reply is on record.",
+          "sourceIds": [
+            "S4"
+          ]
+        },
+        {
+          "kind": "conflict",
+          "statement": "The buyer says nothing arrived even though UPS shows the parcel as delivered. The records can't settle whether it was misdelivered, left at a shared or front-desk location, or taken after delivery.",
+          "sourceIds": [
+            "S3"
+          ]
+        },
+        {
+          "kind": "missing",
+          "statement": "The full street address on the order and on the UPS delivery record isn't in the records. Only the city and ZIP can be compared.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "There's no UPS proof of delivery (signature, photo or delivery location such as front desk or porch).",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "There's no packing record showing that the bowl and both platters went in this one UPS parcel.",
+          "sourceIds": []
+        },
+        {
+          "kind": "unverified",
+          "statement": "The seller's suggestion that the buyer lives in a building with a front desk isn't confirmed by any address or carrier record.",
+          "sourceIds": [
+            "S4"
+          ]
+        }
+      ],
+      "draftResponse": [
+        {
+          "sentence": "Order FH-20452, for a large serving bowl and 2 platters totalling $142.50 USD, was placed for shipment to Austin, TX 78704.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "sentence": "We shipped the order with UPS under tracking number 1Z999AA10123456784, with the label created on Oct 10.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "sentence": "UPS tracking records this shipment as delivered in Austin, TX 78704 on Oct 14 at 5:31 pm local time, which matches the order's shipping city and ZIP code.",
+          "sourceIds": [
+            "S1",
+            "S3"
+          ]
+        },
+        {
+          "sentence": "On Oct 16 we contacted the buyer to share the delivery record and suggested checking with their building's front desk.",
+          "sourceIds": [
+            "S4"
+          ]
+        }
+      ],
+      "questionsForMerchant": [
+        "Does the full street address on the UPS delivery record match the shipping address on the PayPal transaction exactly?",
+        "Can you get UPS proof of delivery (signature, photo or delivery location) for 1Z999AA10123456784?",
+        "Did the bowl and both platters all ship in this single UPS parcel, or were there other shipments?",
+        "Has the buyer replied to your Oct 16 message, or have you contacted UPS about a possible misdelivery?",
+        "Would you rather contest the dispute or offer a remedy, given that the buyer says they checked with neighbours?"
+      ]
+    },
+    "assessedSourceIds": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "validation": {
+      "unknownSourceIds": [],
+      "uncitedDraftSentences": 0
+    },
+    "savedAt": "2026-10-28T18:51:17.951Z"
+  },
+  "SCN-1002@16a3b284ccd1ad41": {
+    "caseId": "SCN-1002",
+    "revision": "16a3b284ccd1ad41",
+    "model": "global.anthropic.claude-opus-5-5",
+    "createdAt": "2026-10-28T18:50:15.733Z",
+    "output": {
+      "recommendation": "review_remedy",
+      "summary": "UPS showed order FH-20452 as delivered in Austin on Oct 14. On Oct 27, UPS said that scan was a mistake and that the package went back to you in Asheville on Oct 26. The buyer most likely never got the order, so plan a refund or reshipment rather than disputing the claim (response due Nov 3).",
+      "findings": [
+        {
+          "kind": "supported",
+          "statement": "Order FH-20452 was a large serving bowl and 2 platters, totalling $142.50 USD, shipping to Austin, TX 78704. This matches the disputed amount.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "A UPS label with tracking 1Z999AA10123456784 was created for the order on Oct 10.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "kind": "conflict",
+          "statement": "UPS recorded a 'Delivered' scan in Austin, TX 78704 on Oct 14. A newer UPS correction notice dated Oct 27 says that scan was recorded in error and the package was returned to sender in Asheville, NC on Oct 26. The newer record corrects the older one, so the Oct 14 scan can't be used as evidence of delivery.",
+          "sourceIds": [
+            "S3",
+            "S5"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "The buyer's claim that nothing arrived matches the UPS correction showing the package was returned to sender.",
+          "sourceIds": [
+            "S5"
+          ]
+        },
+        {
+          "kind": "unverified",
+          "statement": "Your Oct 16 message told the buyer the parcel was delivered on Oct 14. That relied on the scan UPS later withdrew, so the statement no longer holds.",
+          "sourceIds": [
+            "S4",
+            "S3",
+            "S5"
+          ]
+        },
+        {
+          "kind": "unverified",
+          "statement": "The shipment record doesn't list its contents. Nothing confirms that the bowl and both platters all went in this one package.",
+          "sourceIds": [
+            "S1",
+            "S2"
+          ]
+        },
+        {
+          "kind": "missing",
+          "statement": "There's no record that you physically received the returned package, what condition it was in, or why UPS returned it.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "There's no record of any refund, reshipment or further contact with the buyer after Oct 16.",
+          "sourceIds": []
+        }
+      ],
+      "draftResponse": [
+        {
+          "sentence": "UPS issued a correction notice for tracking 1Z999AA10123456784 stating that the earlier 'Delivered' scan was recorded in error and that the package was returned to sender in Asheville, NC on Oct 26.",
+          "sourceIds": [
+            "S5"
+          ]
+        },
+        {
+          "sentence": "We are reviewing a resolution for order FH-20452 ($142.50 USD) in light of this correction.",
+          "sourceIds": [
+            "S1",
+            "S5"
+          ]
+        }
+      ],
+      "questionsForMerchant": [
+        "Has the returned package arrived back with you, and was everything in it (the bowl and both platters) undamaged?",
+        "Did all three items ship in this single UPS package, or did anything ship separately?",
+        "Would you prefer to refund the buyer $142.50 or reship the order? If you reship, can you give PayPal new tracking before Nov 3?",
+        "Have you already refunded the buyer or contacted them since Oct 16?",
+        "Do you want to correct your Oct 16 message, which told the buyer the parcel had been delivered?"
+      ]
+    },
+    "assessedSourceIds": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ],
+    "validation": {
+      "unknownSourceIds": [],
+      "uncitedDraftSentences": 0
+    },
+    "savedAt": "2026-10-28T18:51:17.951Z"
+  },
+  "SCN-1002@8c59e2f3d2ed1aa0": {
+    "caseId": "SCN-1002",
+    "revision": "8c59e2f3d2ed1aa0",
+    "model": "global.anthropic.claude-opus-5-5",
+    "createdAt": "2026-10-28T18:50:33.528Z",
+    "output": {
+      "recommendation": "review_remedy",
+      "summary": "UPS scanned the order as delivered on Oct 14, but on Oct 27 it issued a correction saying that scan was a mistake and the package went back to you on Oct 26. Your packing team got the parcel back on Oct 27 with the whole order inside. The buyer's claim looks valid, so decide whether to refund or reship before the Nov 3 deadline instead of arguing the case.",
+      "findings": [
+        {
+          "kind": "supported",
+          "statement": "Order FH-20452 was for a large serving bowl and 2 platters, totalling $142.50 USD, to be shipped to Austin, TX 78704. This matches the disputed amount.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "A UPS shipment with tracking 1Z999AA10123456784 was created for the order on Oct 10.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "kind": "conflict",
+          "statement": "UPS first recorded a delivery in Austin, TX 78704 on Oct 14. A newer UPS correction notice from Oct 27 says that delivery scan was recorded in error and the package was returned to sender in Asheville, NC on Oct 26. The newer record corrects the older one, so the Oct 14 delivery scan should not be relied on.",
+          "sourceIds": [
+            "S3",
+            "S5"
+          ]
+        },
+        {
+          "kind": "conflict",
+          "statement": "On Oct 16 the seller told the buyer the parcel had been delivered. That message relied on the Oct 14 scan, which the later UPS correction overturned, so it is now inaccurate.",
+          "sourceIds": [
+            "S4",
+            "S3",
+            "S5"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "The packing team logged a returned parcel on Oct 27 with label 1Z999AA10123456784 and a damaged address label, containing a serving bowl and 2 platters. This matches the full order and agrees with the UPS return-to-sender notice.",
+          "sourceIds": [
+            "S6",
+            "S5",
+            "S1"
+          ]
+        },
+        {
+          "kind": "unverified",
+          "statement": "The contents of the returned parcel come only from an internal packing-team note. No outside record confirms them, and the note doesn't say whether the items arrived undamaged.",
+          "sourceIds": [
+            "S6"
+          ]
+        },
+        {
+          "kind": "missing",
+          "statement": "There is no record of a refund or reshipment, or of the buyer being told that the delivery scan was wrong and the parcel came back.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "There is no record confirming whether the damaged address label caused the failed delivery, or whether the Austin address on the order is correct and complete (for example, a unit number).",
+          "sourceIds": []
+        }
+      ],
+      "draftResponse": [
+        {
+          "sentence": "On Oct 27, UPS issued a correction notice for tracking 1Z999AA10123456784 stating that the earlier 'Delivered' scan was recorded in error and that the package was returned to sender on Oct 26.",
+          "sourceIds": [
+            "S5"
+          ]
+        },
+        {
+          "sentence": "Our packing team logged the returned parcel on Oct 27, containing the serving bowl and 2 platters from order FH-20452.",
+          "sourceIds": [
+            "S6",
+            "S1"
+          ]
+        }
+      ],
+      "questionsForMerchant": [
+        "Do you want to give the buyer a full refund of $142.50 or reship the order? Decide before the Nov 3 deadline.",
+        "Are the returned serving bowl and 2 platters undamaged and fit to resend?",
+        "If you reship, can you confirm the buyer's full delivery address, including any unit or front-desk details, since the original label was damaged?",
+        "Have you told the buyer that the Oct 14 delivery message was wrong and the parcel came back to you?",
+        "Have you already issued any refund, full or partial, for this order outside the dispute?"
+      ]
+    },
+    "assessedSourceIds": [
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6"
+    ],
+    "validation": {
+      "unknownSourceIds": [],
+      "uncitedDraftSentences": 0
+    },
+    "savedAt": "2026-10-28T18:51:17.951Z"
+  },
+  "SCN-1003@c98903eca8421b3c": {
+    "caseId": "SCN-1003",
+    "revision": "c98903eca8421b3c",
+    "model": "global.anthropic.claude-opus-5-5",
+    "createdAt": "2026-10-28T18:50:43.981Z",
+    "output": {
+      "recommendation": "need_more_information",
+      "summary": "The buyer says they never got order FH-20488, a $39.00 bud vase ordered Oct 18 for shipping to Denver, CO. The only record here is the order itself, with nothing showing it shipped or arrived. You need to supply shipping and tracking records before the response deadline of Nov 9.",
+      "findings": [
+        {
+          "kind": "supported",
+          "statement": "Order FH-20488 was for one small bud vase, total $39.00 USD, paid through PayPal capture 9QT55021EF and set to ship to Denver, CO 80205. It was recorded on Oct 18.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "The disputed amount of $39.00 USD matches the full order total, so the buyer is disputing the whole order.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "kind": "missing",
+          "statement": "There is no record that the item shipped: no carrier, ship date, tracking number, label or postage receipt.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "There is no carrier tracking history or delivery scan showing where the package went or whether it reached the Denver, CO 80205 address.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "There are no messages with the buyer and no record of any refund, cancellation or replacement for this order.",
+          "sourceIds": []
+        }
+      ],
+      "draftResponse": [
+        {
+          "sentence": "This dispute concerns order FH-20488, a small bud vase totaling $39.00 USD, paid via PayPal capture 9QT55021EF and addressed to Denver, CO 80205.",
+          "sourceIds": [
+            "S1"
+          ]
+        }
+      ],
+      "questionsForMerchant": [
+        "Did order FH-20488 ship? If so, on what date and with which carrier?",
+        "What is the tracking number? Please provide the full tracking history, including any delivery scan and its date and location.",
+        "Can you provide the shipping label or postage receipt showing it was sent to the Denver, CO 80205 address on the order?",
+        "Have you had any messages with the buyer about this order, such as delivery problems or address changes?",
+        "Have you already issued a refund, partial refund or replacement for this order?"
+      ]
+    },
+    "assessedSourceIds": [
+      "S1"
+    ],
+    "validation": {
+      "unknownSourceIds": [],
+      "uncitedDraftSentences": 0
+    },
+    "savedAt": "2026-10-28T18:51:17.951Z"
+  },
+  "SCN-1004@55b83a69d5782237": {
+    "caseId": "SCN-1004",
+    "revision": "55b83a69d5782237",
+    "model": "global.anthropic.claude-opus-5-5",
+    "createdAt": "2026-10-28T18:51:00.070Z",
+    "output": {
+      "recommendation": "review_remedy",
+      "summary": "The buyer is right that the bowl never shipped: it was backordered, then cancelled and refunded $20.00 on Oct 20. USPS shows the plates delivered on Oct 9, and the buyer says they arrived. The dispute is for the full $61.00 even though $20.00 is already refunded, so check the amounts before you reply rather than contesting the whole claim.",
+      "findings": [
+        {
+          "kind": "supported",
+          "statement": "Order FH-20431 was for two dinner plates ($41.00) and a matching bowl ($20.00), $61.00 USD in total, paid with PayPal capture 4HD70219GH and shipping to Madison, WI 53703.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "The Oct 6 shipment (USPS 9400111899223300112233) held only the two dinner plates. The bowl was noted as backordered, to ship separately.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "USPS shows that tracking number as delivered in Madison, WI 53703 on Oct 9. This is the carrier's record, not proof of receipt, but the buyer's own claim says the plates arrived.",
+          "sourceIds": [
+            "S3"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "The newer refund record (Oct 20) corrects the shipment note from Oct 6: the bowl was cancelled and refunded $20.00 (R-55120 on capture 4HD70219GH), not shipped separately. The buyer's claim that the bowl never came matches the records.",
+          "sourceIds": [
+            "S2",
+            "S4"
+          ]
+        },
+        {
+          "kind": "conflict",
+          "statement": "The dispute is for $61.00, but the buyer only says the bowl is missing, and the bowl's $20.00 has already been refunded. If the full amount were awarded, the buyer would get the $20.00 twice and also the $41.00 for plates they say they received.",
+          "sourceIds": [
+            "S1",
+            "S3",
+            "S4"
+          ]
+        },
+        {
+          "kind": "missing",
+          "statement": "No record shows the buyer was told the bowl was cancelled and refunded, or when the dispute was filed compared with the Oct 20 refund.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "No record shows a second shipment for the bowl, which fits with it being cancelled.",
+          "sourceIds": []
+        }
+      ],
+      "draftResponse": [
+        {
+          "sentence": "Order FH-20431 was for two dinner plates ($41.00) and a matching bowl ($20.00), $61.00 USD in total.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "sentence": "The dinner plates shipped by USPS under tracking 9400111899223300112233, and USPS recorded that package as delivered in Madison, WI 53703 on Oct 9.",
+          "sourceIds": [
+            "S2",
+            "S3"
+          ]
+        },
+        {
+          "sentence": "The bowl was backordered and then cancelled, and a $20.00 USD refund (R-55120) was issued on capture 4HD70219GH on Oct 20.",
+          "sourceIds": [
+            "S2",
+            "S4"
+          ]
+        }
+      ],
+      "questionsForMerchant": [
+        "Did you tell the buyer the bowl was cancelled and refunded on Oct 20? If so, can you send that message?",
+        "Was the dispute opened before or after the Oct 20 refund?",
+        "Has PayPal already deducted the $20.00 refund from the disputed amount, or is the whole $61.00 still on hold?",
+        "Do you want to point out that the $20.00 refund already covers the bowl and contest only the $41.00 for the delivered plates?",
+        "Can you confirm the bowl never shipped later on some other tracking number?"
+      ]
+    },
+    "assessedSourceIds": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "validation": {
+      "unknownSourceIds": [],
+      "uncitedDraftSentences": 0
+    },
+    "savedAt": "2026-10-28T18:51:17.951Z"
+  },
+  "SCN-1005@f44865dd35cf306e": {
+    "caseId": "SCN-1005",
+    "revision": "f44865dd35cf306e",
+    "model": "global.anthropic.claude-opus-5-5",
+    "createdAt": "2026-10-28T18:51:17.950Z",
+    "output": {
+      "recommendation": "prepare_response",
+      "summary": "The buyer ordered a $40 planter on Oct 14. It shipped by USPS on Oct 15, and USPS scanned it as delivered to the mailbox at 214 Larkin St on Oct 19. The tracking supports a response due Nov 17, but the scan leaves out \"Apt 3\", so pull the delivery photo first to confirm it reached the right mailbox.",
+      "findings": [
+        {
+          "kind": "supported",
+          "statement": "Order FH-20503 was a small speckled planter with saucer, $40.00 USD, PayPal transaction 4PD421083N0848440, shipping to 214 Larkin St, Apt 3, Burlington, VT 05401 (recorded Oct 14).",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "A USPS label with tracking 9405511899223397654321 was created Oct 15 for order FH-20503. Contents were listed as 1 planter and 1 saucer, 2 lb 6 oz, so the whole order is covered by one shipment.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "kind": "supported",
+          "statement": "USPS recorded the item as delivered in/at mailbox at 214 Larkin St, Burlington, VT 05401 on Oct 19 at 15:12 local time, and noted that a delivery photo is available. This is a carrier record, not proof that the buyer received the item.",
+          "sourceIds": [
+            "S3"
+          ]
+        },
+        {
+          "kind": "conflict",
+          "statement": "The order's ship-to address includes 'Apt 3', but the USPS delivery scan shows only '214 Larkin St' with no unit. In a multi-unit building, a mailbox delivery may have gone to the wrong unit. The scan may just leave the unit out, but the records don't settle this.",
+          "sourceIds": [
+            "S1",
+            "S3"
+          ]
+        },
+        {
+          "kind": "unverified",
+          "statement": "The seller told the buyer on Oct 28 that USPS shows delivery with a photo. The photo itself is not in the records, so what it shows is unconfirmed.",
+          "sourceIds": [
+            "S3",
+            "S4"
+          ]
+        },
+        {
+          "kind": "missing",
+          "statement": "No reply from the buyer to the seller's Oct 28 message is recorded, so we don't know whether the buyer checked with others at the address or reported the package missing to USPS.",
+          "sourceIds": []
+        },
+        {
+          "kind": "missing",
+          "statement": "The USPS delivery photo and the full tracking history (acceptance and in-transit scans) are not attached.",
+          "sourceIds": []
+        }
+      ],
+      "draftResponse": [
+        {
+          "sentence": "Order FH-20503 (PayPal transaction 4PD421083N0848440) was for one small speckled planter with saucer, totaling $40.00 USD, to be shipped to 214 Larkin St, Apt 3, Burlington, VT 05401.",
+          "sourceIds": [
+            "S1"
+          ]
+        },
+        {
+          "sentence": "The complete order (1 planter, 1 saucer) shipped via USPS under tracking number 9405511899223397654321, with the label created on Oct 15.",
+          "sourceIds": [
+            "S2"
+          ]
+        },
+        {
+          "sentence": "USPS tracking records the package as delivered in/at mailbox at 214 Larkin St, Burlington, VT 05401 on Oct 19 at 15:12 local time, and USPS indicates a delivery photo is available.",
+          "sourceIds": [
+            "S3"
+          ]
+        },
+        {
+          "sentence": "On Oct 28 we contacted the buyer with this delivery information and asked them to check with others at their address.",
+          "sourceIds": [
+            "S4"
+          ]
+        }
+      ],
+      "questionsForMerchant": [
+        "Can you get the USPS delivery photo and attach it? Does it show the Apt 3 mailbox, or anything that confirms the right unit?",
+        "Is 214 Larkin St a multi-unit building with separate mailboxes? If so, does the full USPS tracking detail show the unit number anywhere?",
+        "Has the buyer replied to your Oct 28 message, or said whether they checked with neighbors or USPS?",
+        "Can you attach the full USPS tracking history, including acceptance and in-transit scans?",
+        "If the photo or tracking suggests the package went to the wrong mailbox, would you consider filing a USPS missing-mail request or offering a replacement or refund instead of contesting?"
+      ]
+    },
+    "assessedSourceIds": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "validation": {
+      "unknownSourceIds": [],
+      "uncitedDraftSentences": 0
+    },
+    "savedAt": "2026-10-28T18:51:17.951Z"
+  }
+}

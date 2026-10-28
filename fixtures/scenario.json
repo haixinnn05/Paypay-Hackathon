@@ -1,0 +1,214 @@
+{
+  "merchant": {
+    "id": "demo-merchant",
+    "name": "Fernhill Pottery (fictional)",
+    "note": "All records in this scenario are synthetic. No real buyers, orders or shipments."
+  },
+  "cases": [
+    {
+      "caseId": "SCN-1001",
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      "providerStatus": "WAITING_FOR_SELLER_RESPONSE",
+      "amount": {
+        "value": "84.00",
+        "currency": "USD"
+      },
+      "sellerResponseDue": "2026-11-06T23:59:00Z",
+      "orderRef": "FH-20417",
+      "buyerMasked": "J. R*****",
+      "buyerClaim": "I never received my mug set. It has been three weeks.",
+      "sources": [
+        {
+          "id": "S1",
+          "type": "order",
+          "recordedAt": "2026-10-02T15:12:00Z",
+          "content": "Order FH-20417: Speckled mug set (4). Total $84.00 USD. PayPal capture 7XK21944AB. Ship to: Portland, OR 97214."
+        },
+        {
+          "id": "S2",
+          "type": "shipment",
+          "recordedAt": "2026-10-03T18:40:00Z",
+          "content": "Shipment for order FH-20417. Carrier: USPS. Tracking: 9400111899223344556677. Label created 2026-10-03.",
+          "fields": {
+            "carrier": "USPS",
+            "trackingNumber": "9400111899223344556677"
+          }
+        },
+        {
+          "id": "S3",
+          "type": "carrier_event",
+          "recordedAt": "2026-10-07T20:05:00Z",
+          "content": "USPS 9400111899223344556677: Delivered, front door/porch, Portland, OR 97214, 2026-10-07 13:05 local."
+        }
+      ],
+      "pendingSources": []
+    },
+    {
+      "caseId": "SCN-1002",
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      "providerStatus": "WAITING_FOR_SELLER_RESPONSE",
+      "amount": {
+        "value": "142.50",
+        "currency": "USD"
+      },
+      "sellerResponseDue": "2026-11-03T23:59:00Z",
+      "orderRef": "FH-20452",
+      "buyerMasked": "M. O*****",
+      "buyerClaim": "Tracking says delivered but nothing arrived. I checked with neighbours.",
+      "sources": [
+        {
+          "id": "S1",
+          "type": "order",
+          "recordedAt": "2026-10-09T10:01:00Z",
+          "content": "Order FH-20452: Large serving bowl + 2 platters. Total $142.50 USD. PayPal capture 3MN88310CD. Ship to: Austin, TX 78704."
+        },
+        {
+          "id": "S2",
+          "type": "shipment",
+          "recordedAt": "2026-10-10T16:22:00Z",
+          "content": "Shipment for order FH-20452. Carrier: UPS. Tracking: 1Z999AA10123456784. Label created 2026-10-10.",
+          "fields": {
+            "carrier": "UPS",
+            "trackingNumber": "1Z999AA10123456784"
+          }
+        },
+        {
+          "id": "S3",
+          "type": "carrier_event",
+          "recordedAt": "2026-10-14T22:31:00Z",
+          "content": "UPS 1Z999AA10123456784: Delivered, Austin, TX 78704, 2026-10-14 17:31 local."
+        },
+        {
+          "id": "S4",
+          "type": "message",
+          "recordedAt": "2026-10-16T09:12:00Z",
+          "content": "Seller to buyer: Our records show your parcel was delivered on Oct 14. Could you check with your building's front desk?"
+        }
+      ],
+      "pendingSources": [
+        {
+          "id": "S5",
+          "type": "carrier_event",
+          "recordedAt": "2026-10-27T14:02:00Z",
+          "content": "UPS 1Z999AA10123456784: Correction notice. Prior 'Delivered' scan was recorded in error. Package returned to sender, Asheville, NC 28801, 2026-10-26."
+        },
+        {
+          "id": "S6",
+          "type": "message",
+          "recordedAt": "2026-10-27T15:40:00Z",
+          "content": "Internal note (packing team): A returned parcel arrived today with label 1Z999AA10123456784, damaged address label. Contents: serving bowl + 2 platters."
+        }
+      ]
+    },
+    {
+      "caseId": "SCN-1003",
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      "providerStatus": "WAITING_FOR_SELLER_RESPONSE",
+      "amount": {
+        "value": "39.00",
+        "currency": "USD"
+      },
+      "sellerResponseDue": "2026-11-09T23:59:00Z",
+      "orderRef": "FH-20488",
+      "buyerMasked": "A. K*****",
+      "buyerClaim": "Item not received.",
+      "sources": [
+        {
+          "id": "S1",
+          "type": "order",
+          "recordedAt": "2026-10-18T19:44:00Z",
+          "content": "Order FH-20488: Small bud vase. Total $39.00 USD. PayPal capture 9QT55021EF. Ship to: Denver, CO 80205."
+        }
+      ],
+      "pendingSources": []
+    },
+    {
+      "caseId": "SCN-1004",
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      "providerStatus": "WAITING_FOR_SELLER_RESPONSE",
+      "amount": {
+        "value": "61.00",
+        "currency": "USD"
+      },
+      "sellerResponseDue": "2026-11-05T23:59:00Z",
+      "orderRef": "FH-20431",
+      "buyerMasked": "T. N*****",
+      "buyerClaim": "Only the plates arrived, the matching bowl never came.",
+      "sources": [
+        {
+          "id": "S1",
+          "type": "order",
+          "recordedAt": "2026-10-05T12:30:00Z",
+          "content": "Order FH-20431: Dinner plates (2) $41.00 + Matching bowl $20.00. Total $61.00 USD. PayPal capture 4HD70219GH. Ship to: Madison, WI 53703."
+        },
+        {
+          "id": "S2",
+          "type": "shipment",
+          "recordedAt": "2026-10-06T17:05:00Z",
+          "content": "Shipment for order FH-20431. Carrier: USPS. Tracking: 9400111899223300112233. Contents: Dinner plates (2). Note: bowl backordered, to ship separately.",
+          "fields": {
+            "carrier": "USPS",
+            "trackingNumber": "9400111899223300112233"
+          }
+        },
+        {
+          "id": "S3",
+          "type": "carrier_event",
+          "recordedAt": "2026-10-09T18:10:00Z",
+          "content": "USPS 9400111899223300112233: Delivered, Madison, WI 53703, 2026-10-09 13:10 local."
+        },
+        {
+          "id": "S4",
+          "type": "refund",
+          "recordedAt": "2026-10-20T11:00:00Z",
+          "content": "PayPal refund R-55120 on capture 4HD70219GH: $20.00 USD. Memo: bowl backorder cancelled."
+        }
+      ],
+      "pendingSources": []
+    },
+    {
+      "caseId": "SCN-1005",
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      "providerStatus": "WAITING_FOR_SELLER_RESPONSE",
+      "amount": {
+        "value": "40.00",
+        "currency": "USD"
+      },
+      "sellerResponseDue": "2026-11-17T16:20:49Z",
+      "orderRef": "FH-20503",
+      "buyerMasked": "R. S*****",
+      "buyerClaim": "I paid for a planter two weeks ago and it never came.",
+      "sources": [
+        {
+          "id": "S1",
+          "type": "order",
+          "recordedAt": "2026-10-14T18:05:00Z",
+          "content": "Order FH-20503: Small speckled planter with saucer. Total $40.00 USD. PayPal transaction 4PD421083N0848440. Ship to: 214 Larkin St, Apt 3, Burlington, VT 05401."
+        },
+        {
+          "id": "S2",
+          "type": "shipment",
+          "recordedAt": "2026-10-15T15:30:00Z",
+          "content": "Shipment for order FH-20503. Carrier: USPS. Tracking: 9405511899223397654321. Contents: 1 planter, 1 saucer. Weight 2 lb 6 oz. Label created 2026-10-15.",
+          "fields": {
+            "carrier": "USPS",
+            "trackingNumber": "9405511899223397654321"
+          }
+        },
+        {
+          "id": "S3",
+          "type": "carrier_event",
+          "recordedAt": "2026-10-19T19:12:00Z",
+          "content": "USPS 9405511899223397654321: Delivered, in/at mailbox, 214 Larkin St, Burlington, VT 05401, 2026-10-19 15:12 local. Delivery photo available."
+        },
+        {
+          "id": "S4",
+          "type": "message",
+          "recordedAt": "2026-10-28T13:40:00Z",
+          "content": "Seller to buyer: USPS shows your planter was delivered to your mailbox at 214 Larkin St on Oct 19, with a delivery photo. Could you check with others at your address?"
+        }
+      ],
+      "pendingSources": []
+    }
+  ]
+}

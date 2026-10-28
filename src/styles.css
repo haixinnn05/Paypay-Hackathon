@@ -1,0 +1,246 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+/*
+  Tokens. One accent (teal). Good / warn / alert are reserved for real case state.
+  Radius rule: widgets and panels 12px, controls 8px, status chips fully rounded.
+*/
+:root {
+  --dc-font: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --dc-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+  --dc-ink: #141a2b;
+  --dc-muted: #566079;
+  --dc-canvas: #e7ebf3;
+  /* Glass surfaces sit over the tinted backdrop; reading surfaces inside them stay near-solid. */
+  --dc-surface: rgba(255, 255, 255, 0.66);
+  --dc-solid: rgba(252, 253, 255, 0.92);
+  --dc-border: rgba(20, 30, 60, 0.1);
+  --dc-gridline: rgba(20, 30, 60, 0.06);
+  --dc-highlight: rgba(52, 81, 209, 0.06);
+  --dc-glass-edge: rgba(255, 255, 255, 0.7);
+  --dc-accent: #3451d1;
+  --dc-accent-soft: rgba(52, 81, 209, 0.1);
+  /* "Done" states use the cobalt family rather than green. */
+  --dc-good: #2238a8;
+  --dc-good-bg: #dfe6fb;
+  --dc-warn: #8a5300;
+  --dc-warn-bg: #fbf0d9;
+  --dc-alert: #b8321f;
+  --dc-alert-bg: #fbe7e3;
+  --dc-chart-1: #3451d1;
+  --dc-chart-2: #6fb4ea;
+  --dc-chart-3: #c08a2b;
+  --dc-chart-4: #b8321f;
+  --dc-chart-5: #7c8aa8;
+  --dc-chart-6: #a9b8e8;
+  --dc-radius: 10px;
+  --dc-shadow: 0 12px 32px -16px rgba(26, 38, 84, 0.28);
+
+  font-family: var(--dc-font);
+  color: var(--dc-ink);
+  background: var(--dc-canvas);
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+
+/* Tinted backdrop the glass blurs. Fixed and non-interactive so it never repaints on scroll. */
+.backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 8% 0%, rgba(52, 81, 209, 0.22), transparent 70%),
+    radial-gradient(50% 50% at 100% 100%, rgba(111, 180, 234, 0.3), transparent 70%),
+    radial-gradient(40% 40% at 70% 20%, rgba(169, 184, 232, 0.35), transparent 70%),
+    var(--dc-canvas);
+}
+
+/* App shell */
+.app { position: relative; display: flex; flex-direction: column; min-height: 100dvh; height: 100dvh; }
+.app > * { position: relative; z-index: 1; }
+.app > .backdrop { position: fixed; z-index: 0; }
+.topbar { display: flex; align-items: center; gap: 14px; height: 60px; padding: 0 28px; border-bottom: 1px solid var(--dc-glass-edge); background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); }
+.topbar .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: -0.01em; }
+.brand-mark { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--dc-accent); color: #fff; }
+.topbar .merchant { color: var(--dc-muted); }
+.topbar .spacer { flex: 1; }
+.sandbox-badge { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(251, 240, 217, 0.85); color: var(--dc-warn); }
+main { flex: 1; min-height: 0; }
+
+/* Controls */
+button { font: inherit; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: var(--dc-radius); border: 1px solid var(--dc-ink); background: var(--dc-ink); color: var(--dc-surface); cursor: pointer; white-space: nowrap; transition: transform 120ms ease, background-color 120ms ease; }
+button:active:not(:disabled) { transform: translateY(1px); }
+button:focus-visible { outline: 2px solid var(--dc-accent); outline-offset: 2px; }
+button.primary { background: var(--dc-accent); border-color: var(--dc-accent); }
+button.ghost { background: rgba(255, 255, 255, 0.6); color: var(--dc-ink); border-color: var(--dc-border); }
+button.ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.9); }
+button.primary:hover:not(:disabled) { background: #2b45bb; }
+button.link { background: none; border: none; padding: 0; color: var(--dc-accent); font-size: 13px; }
+button:disabled { opacity: 0.45; cursor: default; }
+code, .mono { font-family: var(--dc-mono); font-size: 12.5px; }
+
+/* Widget shared */
+.dc-widget { height: 100%; overflow: auto; font-size: 14px; line-height: 1.55; padding: 18px 20px; }
+.dc-title { font-size: 15px; font-weight: 600; margin: 0; }
+.dc-muted { color: var(--dc-muted); }
+.dc-small { font-size: 12.5px; }
+.dc-section-label { font-size: 12.5px; font-weight: 600; color: var(--dc-muted); margin: 22px 0 10px; }
+.dc-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dc-inline { display: inline-flex; align-items: center; gap: 6px; }
+.dc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+.dc-empty { height: 100%; display: grid; place-content: center; text-align: center; color: var(--dc-muted); gap: 6px; }
+
+.dc-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.dc-chip.good { background: var(--dc-good-bg); color: var(--dc-good); }
+.dc-chip.warn { background: var(--dc-warn-bg); color: var(--dc-warn); }
+.dc-chip.alert { background: var(--dc-alert-bg); color: var(--dc-alert); }
+.dc-chip.neutral { background: var(--dc-highlight); color: var(--dc-muted); }
+.dc-chip.accent { background: var(--dc-accent-soft); color: var(--dc-accent); }
+
+.dc-note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: var(--dc-radius); font-size: 13.5px; margin: 10px 0; }
+.dc-note svg { flex: none; margin-top: 2px; }
+.dc-note.warn { background: var(--dc-warn-bg); color: var(--dc-warn); }
+.dc-note.alert { background: var(--dc-alert-bg); color: var(--dc-alert); }
+.dc-note.neutral { background: var(--dc-highlight); color: var(--dc-muted); }
+.dc-note.good { background: var(--dc-good-bg); color: var(--dc-good); }
+
+/* Queue */
+.dc-queue-group + .dc-queue-group { margin-top: 6px; }
+.dc-queue { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.dc-queue-item { width: 100%; display: grid; gap: 6px; text-align: left; background: rgba(255, 255, 255, 0.55); color: var(--dc-ink); border: 1px solid var(--dc-glass-edge); border-radius: var(--dc-radius); padding: 12px 14px; transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+.dc-queue-item:hover { background: rgba(255, 255, 255, 0.85); }
+@media (prefers-reduced-motion: no-preference) { .dc-queue-item:hover { transform: translateY(-1px); box-shadow: var(--dc-shadow); } }
+.dc-queue-item.selected { border-color: rgba(52, 81, 209, 0.45); background: rgba(255, 255, 255, 0.92); box-shadow: inset 3px 0 0 var(--dc-accent), var(--dc-shadow); }
+.dc-queue-item .amount { font-family: var(--dc-mono); font-size: 13px; }
+.dc-due.urgent { color: var(--dc-alert); font-weight: 600; }
+
+/* Inspector */
+.dc-case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.dc-case-head .amount { font-family: var(--dc-mono); font-size: 18px; font-weight: 500; }
+.dc-claim { margin: 16px 0; padding: 12px 14px; border-left: 3px solid var(--dc-accent); background: var(--dc-solid); border-radius: 0 var(--dc-radius) var(--dc-radius) 0; }
+.dc-claim p { margin: 2px 0 0; }
+.dc-verdict { display: grid; justify-items: start; gap: 8px; padding: 14px 16px; border: 1px solid var(--dc-glass-edge); border-radius: var(--dc-radius); background: var(--dc-solid); }
+.dc-verdict p { margin: 0; }
+.dc-findings { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.dc-findings li { display: grid; grid-template-columns: 18px 1fr; gap: 10px; padding: 10px 12px; border-radius: var(--dc-radius); background: rgba(255, 255, 255, 0.5); }
+.dc-findings li svg { margin-top: 3px; }
+.dc-findings .conflict { background: var(--dc-alert-bg); }
+.dc-findings .conflict svg { color: var(--dc-alert); }
+.dc-findings .missing svg, .dc-findings .unverified svg { color: var(--dc-warn); }
+.dc-findings .supported svg { color: var(--dc-good); }
+.dc-supported summary { cursor: pointer; font-size: 13.5px; color: var(--dc-muted); padding: 6px 0; }
+
+.dc-cite { font-family: var(--dc-mono); font-size: 11.5px; padding: 0 6px; margin-left: 3px; border-radius: 999px; border: 1px solid var(--dc-border); background: var(--dc-surface); color: var(--dc-accent); vertical-align: 1px; }
+.dc-cite.active { background: var(--dc-accent); border-color: var(--dc-accent); color: var(--dc-surface); }
+
+/* Records timeline */
+.dc-timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+.dc-timeline::before { content: ""; position: absolute; left: 13px; top: 6px; bottom: 6px; width: 1px; background: var(--dc-border); }
+.dc-event { position: relative; display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 6px 0; cursor: pointer; }
+.dc-event-icon { width: 27px; height: 27px; border-radius: 999px; display: grid; place-items: center; background: var(--dc-solid); border: 1px solid var(--dc-border); color: var(--dc-muted); position: relative; }
+.dc-event-body { padding: 4px 10px 8px; border-radius: var(--dc-radius); }
+.dc-event-body p { margin: 2px 0 0; }
+.dc-event.focused .dc-event-body { background: var(--dc-accent-soft); }
+.dc-event.focused .dc-event-icon { border-color: var(--dc-accent); color: var(--dc-accent); }
+.dc-event.new .dc-event-icon { border-color: var(--dc-alert); color: var(--dc-alert); }
+
+/* Skeleton */
+.dc-skeleton { display: grid; gap: 8px; margin-top: 12px; }
+.dc-skeleton span { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--dc-highlight), var(--dc-gridline), var(--dc-highlight)); background-size: 200% 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  .dc-skeleton span { animation: dc-shimmer 1.4s ease-in-out infinite; }
+  .dc-appear { animation: dc-appear 260ms ease-out both; }
+  .dc-spin { animation: dc-spin 0.9s linear infinite; }
+}
+@keyframes dc-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes dc-appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes dc-spin { to { transform: rotate(360deg); } }
+
+/* Action review */
+.dc-progress { list-style: none; margin: 10px 0 14px; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.dc-progress li { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dc-muted); padding-top: 8px; border-top: 3px solid var(--dc-border); }
+.dc-progress li.done { color: var(--dc-good); border-top-color: var(--dc-good); }
+.dc-progress li.current { color: var(--dc-ink); font-weight: 600; border-top-color: var(--dc-accent); }
+.dc-proposal { display: grid; grid-template-columns: 74px 1fr; gap: 6px 10px; margin: 0 0 12px; font-size: 13.5px; }
+.dc-proposal dt { color: var(--dc-muted); }
+.dc-proposal dd { margin: 0; overflow-wrap: anywhere; }
+.dc-letter { padding: 14px 16px; border: 1px solid var(--dc-glass-edge); border-radius: var(--dc-radius); background: var(--dc-solid); line-height: 1.55; }
+.dc-letter p { margin: 0 0 6px; }
+.dc-letter p:last-child { margin: 0; }
+.dc-receipt { margin-top: 16px; padding: 14px 16px; border-radius: var(--dc-radius); background: var(--dc-solid); display: grid; gap: 4px; }
+.dc-receipt.evidence_accepted { background: var(--dc-good-bg); }
+.dc-receipt.needs_reconciliation, .dc-receipt.rejected { background: var(--dc-alert-bg); }
+.dc-receipt p { margin: 0; }
+.dc-error { color: var(--dc-alert); font-size: 13.5px; }
+
+/* An out-of-date assessment stays readable but visibly superseded. The banner itself stays full strength. */
+.dc-stale > :not(.dc-note) { opacity: 0.55; }
+
+/* Studio panels as frosted glass. A web approximation of a glass material (backdrop-filter + light edge),
+   not Apple's Liquid Glass. Panel colour comes from the theme (--dc-surface); this adds blur, edge and depth. */
+.ag-studio-layout-widget-container {
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), var(--dc-shadow);
+  outline: 1px solid var(--dc-glass-edge);
+  outline-offset: -1px;
+}
+/* The queue rail is a lighter, more transparent layer than the reading panels. */
+.ag-studio-layout-widget-container:has(.dc-widget.queue) { background-color: rgba(255, 255, 255, 0.42) !important; }
+.ag-studio-layout-widget-container:has(.dc-widget.reading) { background-color: rgba(255, 255, 255, 0.74) !important; }
+
+.dc-rail-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.dc-rail-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+
+@media (prefers-reduced-transparency: reduce) {
+  :root { --dc-surface: #f9fafc; }
+  .topbar, .ag-studio-layout-widget-container { backdrop-filter: none; -webkit-backdrop-filter: none; background-color: #f9fafc !important; }
+}
+
+/* Built-in number tiles get the same inner spacing as the custom panels. */
+.ag-studio-layout-widget-container:has(.ag-studio-value-widget) { padding: 10px 12px; }
+
+/* Studio derives some panel labels from the (translucent) surface colour, which washes them out. */
+.ag-studio-panel-title, .ag-studio-ai-thread-label { color: var(--dc-ink); }
+
+/* Rows wrap instead of clipping when the canvas narrows (e.g. with the assistant open). */
+.dc-row { flex-wrap: wrap; row-gap: 2px; }
+.dc-row > * { white-space: nowrap; }
+
+/* Assistant drawer: a glass layer that slides over the dashboard from the right. */
+main { position: relative; }
+button.icon { padding: 7px; }
+.assistant { position: absolute; top: 12px; right: 12px; bottom: 12px; width: min(420px, calc(100% - 24px)); z-index: 5;
+  display: flex; flex-direction: column; border-radius: 16px; border: 1px solid var(--dc-glass-edge);
+  background: rgba(250, 251, 255, 0.82); backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 24px 60px -20px rgba(26, 38, 84, 0.45);
+  transform: translateX(calc(100% + 24px)); visibility: hidden; transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 260ms; }
+.assistant.open { transform: none; visibility: visible; transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) { .assistant, .assistant.open { transition: none; } }
+.assistant-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--dc-border); }
+.assistant-head p { margin: 4px 0 0; }
+.assistant-body { flex: 1; overflow: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.assistant-empty p { margin: 0 0 12px; }
+.assistant-suggestions { display: grid; gap: 8px; }
+.assistant-suggestions button { justify-content: flex-start; white-space: normal; text-align: left; }
+.msg { line-height: 1.55; font-size: 14px; }
+.msg p { margin: 0 0 8px; }
+.msg ul { margin: 0 0 8px; padding-left: 18px; }
+.msg.user { align-self: flex-end; max-width: 85%; padding: 9px 12px; border-radius: 12px 12px 4px 12px; background: var(--dc-accent); color: #fff; }
+.msg.assistant-msg { padding: 12px 14px; border-radius: 12px 12px 12px 4px; background: var(--dc-solid); border: 1px solid var(--dc-glass-edge); }
+.tool-step { display: flex; align-items: center; gap: 6px; margin: 0 0 6px !important; }
+.assistant-thinking { display: flex; align-items: center; gap: 6px; margin: 0; }
+.assistant-input { display: flex; gap: 8px; align-items: flex-end; padding: 12px 14px 14px; border-top: 1px solid var(--dc-border); }
+.assistant-input textarea { flex: 1; resize: none; font: inherit; font-size: 14px; padding: 9px 12px; border-radius: var(--dc-radius); border: 1px solid var(--dc-border); background: var(--dc-solid); color: var(--dc-ink); }
+.assistant-input textarea::placeholder { color: var(--dc-muted); }
+.assistant-input textarea:focus { outline: 2px solid var(--dc-accent); outline-offset: 0; }
+@media (prefers-reduced-transparency: reduce) { .assistant { background: #f9fafc; backdrop-filter: none; -webkit-backdrop-filter: none; } }
+.tool-steps { display: grid; gap: 4px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--dc-gridline); }
+.tool-steps .tool-step { margin: 0 !important; }
+.msg .dc-cite { margin: 0 1px; }
+.msg li { margin-bottom: 4px; }
+
+/* Studio keeps an invisible skeleton layer over every widget (opacity 0, z-index 0). With the glass
+   panels it ends up above custom widget content and swallows clicks, so let clicks pass through it
+   unless Studio actually shows it. */
+.ag-studio-layout-widget-skeleton-overlay-container:not(.ag-studio-layout-widget-skeleton-overlay-container-active) {
+  pointer-events: none;
+}
