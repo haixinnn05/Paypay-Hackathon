@@ -218,7 +218,8 @@ app.get("/api/activity", (_req, res) => {
         by: a.by === "autopilot" ? "Autopilot" : "You",
         rule: a.rule ?? "",
         result: { submitting: "Sending", evidence_accepted: "Accepted by PayPal", done: "Done in PayPal", simulated: "Simulated", rejected: "Not sent", needs_reconciliation: "Unknown, check PayPal" }[a.state],
-        amount: Number(a.amount?.value ?? 0),
+        // Older attempts didn't record an amount; fall back to the case's.
+        amount: Number(a.amount?.value ?? findAny(a.caseId)?.amount.value ?? 0),
         mode: a.target.mode === "sandbox" ? "PayPal sandbox" : "Simulated",
         detail: a.error ?? a.summary ?? "",
         // Pre-computed numbers so dashboard tiles can sum them without per-widget filters.

@@ -1,8 +1,8 @@
 import type { AgDataSourcesDefinition, AgFieldDefinition, AgFormat } from "ag-studio";
-import type { QueueRow } from "../api.ts";
+import type { ActivityRow, QueueRow } from "../api.ts";
 import type { DisputeRegistry } from "./widgets.tsx";
 
-type FieldSpec = [id: keyof QueueRow, name: string, format: AgFormat, hide?: boolean, description?: string];
+type FieldSpec = [id: string, name: string, format: AgFormat, hide?: boolean, description?: string];
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
@@ -16,7 +16,7 @@ const fields = (specs: FieldSpec[]): AgFieldDefinition[] =>
     ...(hide && { hide }),
   }));
 
-export function buildStudioData(rows: QueueRow[]): AgDataSourcesDefinition<DisputeRegistry> {
+export function buildStudioData(rows: QueueRow[], activity: ActivityRow[]): AgDataSourcesDefinition<DisputeRegistry> {
   return {
     description:
       "PayPal 'item not received' disputes for one small seller. All records are fictional scenario data. " +
@@ -45,6 +45,25 @@ export function buildStudioData(rows: QueueRow[]): AgDataSourcesDefinition<Dispu
           ["lastAttempt", "Last submission", "textFormat", true],
           ["linkedDispute", "PayPal dispute", "textFormat", true],
           ["revision", "Revision", "textFormat", true],
+        ]),
+      },
+      {
+        id: "activity",
+        description: "Every PayPal action taken or simulated, by the seller or the autopilot, newest first.",
+        data: activity,
+        fields: fields([
+          ["at", "When", "dateTimeFormat"],
+          ["caseId", "Case", "textFormat"],
+          ["action", "Action", "textFormat"],
+          ["by", "By", "textFormat"],
+          ["rule", "Rule", "textFormat"],
+          ["result", "Result", "textFormat"],
+          ["amount", "Amount", "currencyFormat"],
+          ["mode", "Where", "textFormat"],
+          ["detail", "Detail", "textFormat"],
+          ["autopilotActions", "Autopilot actions", "integerFormat", false, "1 for each action the autopilot took or simulated."],
+          ["autopilotRefunded", "Refunded by autopilot", "currencyFormat", false, "Amount the autopilot refunded."],
+          ["id", "Reference", "textFormat", true],
         ]),
       },
     ],

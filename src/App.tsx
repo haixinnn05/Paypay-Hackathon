@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { AgStudioAiModule, enableStudioDevValidations, type AgStudioMode } from "ag-studio";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AgStudioAiModule, enableStudioDevValidations, type AgStudioApi, type AgStudioMode } from "ag-studio";
 import { AgStudio, AgStudioProvider } from "ag-studio-react";
 import { ArrowCounterClockwise, ChatCircleText, PencilSimple, ShieldCheck, X } from "@phosphor-icons/react";
 import { Assistant } from "./Assistant.tsx";
-import { store, useStore } from "./store.ts";
+import { store, useStore, type Page } from "./store.ts";
 import { buildAi } from "./studio/ai.ts";
 import { buildStudioData } from "./studio/data.ts";
 import { disputesReport } from "./studio/report.ts";
@@ -14,6 +14,9 @@ if (import.meta.env.DEV) enableStudioDevValidations();
 
 export function App() {
   const rows = useStore((s) => s.rows);
+  const activity = useStore((s) => s.activity);
+  const page = useStore((s) => s.page);
+  const studioApi = useRef<AgStudioApi | null>(null);
   const merchantName = useStore((s) => s.merchantName);
   // Studio shows its AI panel only in edit mode. ?mode=edit opens straight into it.
   const params = new URLSearchParams(location.search);
@@ -37,7 +40,13 @@ export function App() {
   }, []);
 
   // Studio re-reads data when this object changes, so rebuild it only when the queue does.
-  const studioData = useMemo(() => buildStudioData(rows), [rows]);
+  const studioData = useMemo(() => buildStudioData(rows, activity), [rows, activity]);
+
+  // The header tabs drive which Studio page is showing.
+  useEffect(() => {
+    const api = studioApi.current;
+    if (api && api.getState().selectedPageId !== page) api.setState({ ...api.getState(), selectedPageId: page });
+  }, [page]);
 
   return (
     <div className="app">
@@ -50,6 +59,18 @@ export function App() {
           Dispute Copilot
         </span>
         <span className="merchant">{merchantName}</span>
+        <nav className="tabs" aria-label="Pages">
+          {(
+            [
+              ["disputes", "Cases"],
+              ["autopilot", "Autopilot"],
+            ] as [Page, string][]
+          ).map(([id, label]) => (
+            <button key={id} className={page === id ? "tab active" : "tab"} aria-current={page === id ? "page" : undefined} onClick={() => store.setPage(id)}>
+              {label}
+            </button>
+          ))}
+        </nav>
         <span className="sandbox-badge" title="Live cases are real disputes in a PayPal sandbox account; Demo cases are fictional">PayPal sandbox, test money only</span>
         <span className="spacer" />
         {ai && (
@@ -78,7 +99,11 @@ export function App() {
               initialState={disputesReport}
               context={store}
               ai={ai?.setup}
-              onApiReady={({ api }) => ai?.ensure(api)}
+              onApiReady={({ api }) => {
+                studioApi.current = api;
+                ai?.ensure(api);
+                if (api.getState().selectedPageId !== store.getState().page) api.setState({ ...api.getState(), selectedPageId: store.getState().page });
+              }}
               // No filters in this workspace, so view mode shows no side panels. Edit mode keeps the
               // assistant on the left and Studio's editing panels on the right.
               panels={{ view: { left: [], right: [] }, edit: { left: ["ai"], right: ["edit", "data", "filters"] } }}

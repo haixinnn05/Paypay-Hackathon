@@ -7,6 +7,11 @@ import {
   ArrowUUpLeft,
   CreditCard,
   ChatText,
+  ChatCircleText,
+  Eye,
+  HandPalm,
+  Lightning,
+  MinusCircle,
   CheckCircle,
   CircleNotch,
   Clock,
@@ -23,13 +28,13 @@ import {
   XCircle,
   type Icon,
 } from "@phosphor-icons/react";
-import type { Assessment, Attempt, CaseDetail, QueueRow, Source } from "../api.ts";
+import type { Assessment, Attempt, AutopilotPlanItem, AutopilotRules, CaseDetail, QueueRow, Source } from "../api.ts";
 import { store, useStore } from "../store.ts";
 
 // Custom Studio widgets. They hold no data mappings: each reads the shared store (also passed to
 // Studio as `context`), so selecting a case in the queue drives the other two.
 
-type DisputeWidgetType = "case-queue" | "evidence-inspector" | "action-review";
+type DisputeWidgetType = "case-queue" | "evidence-inspector" | "action-review" | "autopilot-panel";
 type DisputeWidgetState<T extends DisputeWidgetType> = AgWidgetData<Record<string, never>, AgWidgetDataFormat<unknown>> & { type: T };
 type DisputeWidgetDefinition<T extends DisputeWidgetType> = AgWidgetDefinition<T, DisputeWidgetState<T>>;
 type Params<T extends DisputeWidgetType> = AgWidgetParams<DisputeWidgetState<T>>;
@@ -40,6 +45,7 @@ export interface DisputeRegistry extends Omit<AgDefaultRegistry, "widgets"> {
     | DisputeWidgetDefinition<"case-queue">
     | DisputeWidgetDefinition<"evidence-inspector">
     | DisputeWidgetDefinition<"action-review">
+    | DisputeWidgetDefinition<"autopilot-panel">
     | AgDefaultWidgetDefinition
   )[];
 }
@@ -662,6 +668,153 @@ function Receipt({ attempt }: { attempt: Attempt }) {
   );
 }
 
+// --- Autopilot -------------------------------------------------------------------------
+
+const PLAN_ACTION: Record<AutopilotPlanItem["decision"]["action"], { label: string; icon: Icon; tone: string }> = {
+  refund: { label: "Refund", icon: ArrowUUpLeft, tone: "accent" },
+  evidence: { label: "Submit evidence", icon: PaperPlaneTilt, tone: "accent" },
+  message: { label: "Message buyer", icon: ChatCircleText, tone: "accent" },
+  needs_you: { label: "Needs you", icon: HandPalm, tone: "warn" },
+  skip: { label: "Nothing to do", icon: MinusCircle, tone: "neutral" },
+};
+
+function AutopilotPanel(params: Params<"autopilot-panel">) {
+  useDisplayed(params);
+  const autopilot = useStore((s) => s.autopilot);
+  const error = useStore((s) => s.error);
+  const [draft, setDraft] = useState<AutopilotRules | null>(null);
+
+  useEffect(() => {
+    if (!autopilot.rules) store.loadAutopilot().catch(() => {});
+  }, [autopilot.rules]);
+  useEffect(() => {
+    if (autopilot.rules && !draft) setDraft(autopilot.rules);
+  }, [autopilot.rules, draft]);
+
+  if (!draft || !autopilot.rules) return <div className="dc-widget dc-empty">Loading autopilot</div>;
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(autopilot.rules);
+  const run = autopilot.lastRun;
+  const actionable = run?.plan.filter((p) => ["refund", "evidence", "message"].includes(p.decision.action)) ?? [];
+  const liveActions = actionable.filter((p) => !p.simulated);
+  const canRun = Boolean(run?.dryRun) && !dirty && actionable.length > 0;
+  const busy = autopilot.running !== null;
+
+  const money = (path: "refundSmall" | "submitEvidence") => (e: { target: { value: string } }) =>
+    setDraft({ ...draft, [path]: { ...draft[path], maxAmount: Number(e.target.value) } });
+
+  return (
+    <div className="dc-widget reading">
+      <h3 className="dc-title dc-inline">
+        <Lightning size={16} weight="fill" /> Autopilot
+      </h3>
+      <p className="dc-small dc-muted" style={{ margin: "4px 0 14px" }}>
+        Handles routine disputes under your rules. The AI reads each case; your rules decide; PayPal carries it out. Everything lands in the activity log.
+      </p>
+
+      <div className="dc-rules">
+        <label className="dc-rule">
+          <input type="checkbox" checked={draft.refundSmall.on} onChange={(e) => setDraft({ ...draft, refundSmall: { ...draft.refundSmall, on: e.target.checked } })} />
+          <span>
+            <strong>Refund small claims</strong> with no shipment record, up to{" "}
+            <input type="number" min={0} step={1} value={draft.refundSmall.maxAmount} onChange={money("refundSmall")} aria-label="Refund limit in dollars" /> dollars
+          </span>
+        </label>
+        <label className="dc-rule">
+          <input type="checkbox" checked={draft.messageBuyer.on} onChange={(e) => setDraft({ ...draft, messageBuyer: { on: e.target.checked } })} />
+          <span>
+            <strong>Message the buyer first</strong> with the carrier and tracking, when you haven't written yet
+          </span>
+        </label>
+        <label className="dc-rule">
+          <input type="checkbox" checked={draft.submitEvidence.on} onChange={(e) => setDraft({ ...draft, submitEvidence: { ...draft.submitEvidence, on: e.target.checked } })} />
+          <span>
+            <strong>Submit evidence</strong> when the records support a response and every sentence is cited, up to{" "}
+            <input type="number" min={0} step={1} value={draft.submitEvidence.maxAmount} onChange={money("submitEvidence")} aria-label="Evidence limit in dollars" /> dollars
+          </span>
+        </label>
+        <label className="dc-rule plain">
+          <span>
+            Refund at most{" "}
+            <input type="number" min={0} step={1} value={draft.refundBudgetPerRun} onChange={(e) => setDraft({ ...draft, refundBudgetPerRun: Number(e.target.value) })} aria-label="Refund budget per run" /> dollars in one run
+          </span>
+        </label>
+      </div>
+
+      <div className="dc-actions">
+        {dirty && (
+          <button className="primary" onClick={() => store.saveRules(draft)}>
+            Save rules
+          </button>
+        )}
+        <button className={dirty || canRun ? "ghost" : "primary"} disabled={busy || dirty} onClick={() => store.runAutopilot("preview")}>
+          {autopilot.running === "preview" ? <CircleNotch size={15} className="dc-spin" /> : <Eye size={15} />}
+          {autopilot.running === "preview" ? "Reading cases" : "Preview"}
+        </button>
+        <button className="primary" disabled={busy || !canRun} onClick={() => store.runAutopilot("run")} title={canRun ? "" : "Preview first, then run exactly what it shows"}>
+          {autopilot.running === "run" ? <CircleNotch size={15} className="dc-spin" /> : <Lightning size={15} />}
+          {canRun ? `Run ${actionable.length} ${actionable.length === 1 ? "action" : "actions"}` : "Run"}
+        </button>
+      </div>
+      {canRun && liveActions.length > 0 && (
+        <div className="dc-note warn">
+          <Warning size={16} weight="fill" />
+          <span>
+            {liveActions.length} of these {liveActions.length === 1 ? "acts" : "act"} on real PayPal sandbox disputes
+            {liveActions.some((p) => p.decision.action === "refund") ? ", including a refund" : ""}. Test money only, but it can't be undone.
+          </span>
+        </div>
+      )}
+      {error && <p className="dc-error">{error}</p>}
+
+      {run && (
+        <>
+          <div className="dc-section-label">
+            {run.dryRun ? "Preview: nothing has been sent" : "Last run"}, {new Date(run.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+          </div>
+          <ul className="dc-plan">
+            {run.plan.map((p) => (
+              <PlanRow key={p.decision.caseId} item={p} />
+            ))}
+          </ul>
+        </>
+      )}
+      {!run && <p className="dc-small dc-muted">Preview to see what the autopilot would do with your open cases. Nothing is sent until you run it.</p>}
+    </div>
+  );
+}
+
+function PlanRow({ item }: { item: AutopilotPlanItem }) {
+  const a = PLAN_ACTION[item.decision.action];
+  const outcome = item.outcome;
+  return (
+    <li className={`dc-plan-row ${item.decision.action}`}>
+      <a.icon size={16} />
+      <div>
+        <div className="dc-row">
+          <span className="dc-inline">
+            <button className="link mono" onClick={() => store.openCase(item.decision.caseId)} title="Open this case on the Cases page">
+              {item.decision.caseId}
+            </button>
+            <span className={`dc-source-tag ${item.source}`}>{item.source === "paypal" ? "Live PayPal" : "Demo"}</span>
+          </span>
+          <span className="mono dc-small">${item.amount}</span>
+        </div>
+        <div className="dc-inline">
+          <span className={`dc-chip ${a.tone}`}>{a.label}</span>
+          {item.simulated && ["refund", "evidence", "message"].includes(item.decision.action) && <span className="dc-small dc-muted">simulated</span>}
+          {outcome && (
+            <span className={`dc-small ${outcome.state === "rejected" || outcome.state === "needs_reconciliation" ? "dc-error" : "dc-muted"}`}>
+              {outcome.state === "done" || outcome.state === "evidence_accepted" ? "Done in PayPal" : outcome.state === "simulated" ? "Simulated" : outcome.error ?? outcome.state}
+            </span>
+          )}
+        </div>
+        <p className="dc-small dc-muted">{item.decision.why}</p>
+      </div>
+    </li>
+  );
+}
+
 // --- Registration -----------------------------------------------------------------------
 
 const definition = <T extends DisputeWidgetType>(
@@ -685,6 +838,7 @@ export const disputeWidgets = (defaults: AgWidgetsConfig<AgDefaultRegistry>): Ag
       definition("case-queue", "Case queue", CaseQueue, "Lists every dispute case grouped by urgency; selecting one opens it in the other dispute widgets."),
       definition("evidence-inspector", "Evidence inspector", EvidenceInspector, "Shows the selected case's buyer claim, the AI assessment's findings with citations, and a timeline of the source records."),
       definition("action-review", "Action review", ActionReview, "Shows the exact evidence and message that would be sent to PayPal for the selected case, with separate approve and submit controls and the PayPal receipt."),
+      definition("autopilot-panel", "Autopilot", AutopilotPanel, "The seller's autopilot rules with Preview and Run; lists what the autopilot would do or did for each open case."),
     ],
-    menu: [...defaults.menu, { label: "Disputes", widgetIds: ["case-queue", "evidence-inspector", "action-review"] }],
+    menu: [...defaults.menu, { label: "Disputes", widgetIds: ["case-queue", "evidence-inspector", "action-review", "autopilot-panel"] }],
   });

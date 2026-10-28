@@ -4,7 +4,10 @@ import { api, autopilotApi, type ActivityRow, type AutopilotRules, type Autopilo
 // One small store shared by the page and every custom Studio widget (passed in as Studio's `context`),
 // so selecting a case in the queue updates the inspector and the action review together.
 
+export type Page = "disputes" | "autopilot";
+
 interface State {
+  page: Page;
   activity: ActivityRow[];
   autopilot: { rules: AutopilotRules | null; lastRun: AutopilotRun | null; liveWrites: boolean; running: "preview" | "run" | null };
   merchantName: string;
@@ -18,7 +21,7 @@ interface State {
   error: string | null;
 }
 
-let state: State = { activity: [], autopilot: { rules: null, lastRun: null, liveWrites: false, running: null }, live: { configured: false, sync: null }, merchantName: "", rows: [], selectedId: null, detail: null, focusedSource: null, busy: false, error: null };
+let state: State = { page: "disputes", activity: [], autopilot: { rules: null, lastRun: null, liveWrites: false, running: null }, live: { configured: false, sync: null }, merchantName: "", rows: [], selectedId: null, detail: null, focusedSource: null, busy: false, error: null };
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<State>) {
@@ -65,6 +68,12 @@ export const store = {
     if (state.selectedId === id) set({ detail });
   },
   focusSource: (id: string | null) => set({ focusedSource: id }),
+  setPage: (page: Page) => set({ page }),
+  /** Opens a case on the Cases page, e.g. from the autopilot plan. */
+  async openCase(id: string) {
+    set({ page: "disputes" });
+    await store.select(id);
+  },
   assess: () => run(api.assess),
   advance: () => run(api.advance),
   approve: (digest: string) => run((id) => api.approve(id, digest)),

@@ -48,5 +48,37 @@ export const disputesReport: AgReportState<DisputeRegistry> = {
         action: at(17, 8, 7, 36),
       },
     },
+    {
+      id: "autopilot",
+      widgets: {
+        panel: { type: "autopilot-panel", dataMapping: {} },
+        "kpi-auto-actions": kpi("Handled by autopilot", { id: "activity.autopilotActions", aggregation: "sum" }, "actions taken or simulated"),
+        "kpi-auto-refunded": kpi("Refunded by autopilot", { id: "activity.autopilotRefunded", aggregation: "sum" }, "within your limits"),
+        log: {
+          type: "grid",
+          dataMapping: {
+            cols: [
+              { id: "activity.at" },
+              { id: "activity.caseId" },
+              { id: "activity.action" },
+              { id: "activity.by" },
+              { id: "activity.result" },
+              { id: "activity.amount", aggregation: "sum" },
+              { id: "activity.mode" },
+              { id: "activity.rule" },
+              { id: "activity.detail" },
+            ],
+          },
+          sort: [{ field: { id: "activity.at" }, direction: "desc" }],
+          format: { title: { enabled: true, text: "Activity log: every action sent or simulated" } },
+        },
+      },
+      widgetLayout: {
+        panel: at(0, 0, 9, 44),
+        "kpi-auto-actions": at(9, 0, 7, 8),
+        "kpi-auto-refunded": at(16, 0, 8, 8),
+        log: at(9, 8, 15, 36),
+      },
+    },
   ],
 };
