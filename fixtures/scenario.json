@@ -209,6 +209,28 @@
         }
       ],
       "pendingSources": []
+    },
+    {
+      "caseId": "SCN-1006",
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED",
+      "providerStatus": "WAITING_FOR_SELLER_RESPONSE",
+      "amount": {
+        "value": "12.00",
+        "currency": "USD"
+      },
+      "sellerResponseDue": "2026-11-12T23:59:00Z",
+      "orderRef": "FH-20511",
+      "buyerMasked": "D. P*****",
+      "buyerClaim": "Still waiting on my coaster after three weeks.",
+      "sources": [
+        {
+          "id": "S1",
+          "type": "order",
+          "recordedAt": "2026-10-06T09:20:00Z",
+          "content": "Order FH-20511: Glazed coaster (1). Total $12.00 USD. Ship to: Lansing, MI 48933. Status: awaiting restock, not yet shipped."
+        }
+      ],
+      "pendingSources": []
     }
   ]
 }

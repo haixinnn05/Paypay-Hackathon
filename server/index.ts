@@ -3,11 +3,13 @@ import { existsSync } from "node:fs";
 import { env, paypalConfigured } from "./env.ts";
 import { ActionError, approvalState, approve, attemptsFor, buildProposal, isBlocker, linkedDispute, resetSimulatedAttempts, submit, type Attempt } from "./actions.ts";
 import { allCases, findAny, type AnyCase } from "./cases.ts";
+import { getLastRun, getRules, runAutopilot, setRules } from "./autopilot.ts";
+import { allAttempts } from "./actions.ts";
 import { addShipment, liveSyncState, refreshLive, syncLive } from "./live.ts";
-import { assessCase, type AssessmentResult } from "./assess.ts";
+import type { AssessmentResult } from "./assess.ts";
+import { assess, clearAssessments, latestAssessment, NoSavedResult } from "./assessments.ts";
 import { rateLimit } from "./limit.ts";
 import { getDispute, listDisputes, PayPalError } from "./paypal.ts";
-import { findSaved } from "./saved.ts";
 import { advanceCase, caseRevision, merchant, resetScenario } from "./scenario.ts";
 
 const app = express();
@@ -17,9 +19,6 @@ app.use(express.json({ limit: "2mb" }));
 const assessLimit = rateLimit("assessment", Number(process.env.ASSESS_LIMIT ?? 15), Number(process.env.ASSESS_DAILY_LIMIT ?? 200));
 // One assistant question makes several model calls, so this limit is per model call.
 const aiLimit = rateLimit("assistant", Number(process.env.AI_LIMIT ?? 80), Number(process.env.AI_DAILY_LIMIT ?? 600));
-
-// Latest assessment per case. An assessment is stale once the case revision moves past it.
-const assessments = new Map<string, AssessmentResult>();
 
 // What PayPal last reported for linked cases, from "Refresh from PayPal" or a submission's read-back.
 const observed = new Map<string, { status: string; observedAt: string }>();
@@ -41,7 +40,7 @@ function providerStatus(c: AnyCase): string {
 const CLOSED_STEPS = new Set(["Evidence submitted", "Refunded", "Closed by PayPal", "Waiting for buyer", "Under PayPal review"]);
 
 function queueRow(c: AnyCase) {
-  const a = assessments.get(c.caseId);
+  const a = latestAssessment(c.caseId);
   const revision = caseRevision(c);
   const last = attemptsFor(c.caseId).findLast((t) => t.state !== "rejected");
   const step = nextStep(a, revision, last, providerStatus(c));
@@ -120,7 +119,7 @@ app.get("/api/cases/:id", (req, res) => {
   const { pendingSources, ...rest } = c;
   // live is internal sync metadata; the client gets the parts it needs below.
   const { live: liveMeta, ...shown } = rest as typeof rest & { live?: unknown };
-  const assessment = assessments.get(c.caseId);
+  const assessment = latestAssessment(c.caseId);
   const proposal = buildProposal(c, assessment);
   res.json({
     ...shown,
@@ -158,7 +157,7 @@ app.post("/api/cases/:id/refresh", async (req, res) => {
 app.post("/api/cases/:id/approve", (req, res) => {
   const c = findAny(String(req.params.id));
   if (!c) return res.status(404).json({ error: "Unknown case" });
-  const proposal = buildProposal(c, assessments.get(c.caseId));
+  const proposal = buildProposal(c, latestAssessment(c.caseId));
   if (isBlocker(proposal)) return res.status(409).json({ error: proposal.reason });
   try {
     res.json(approve(c.caseId, proposal, String(req.body?.digest ?? "")));
@@ -171,7 +170,7 @@ app.post("/api/cases/:id/submit", async (req, res) => {
   const c = findAny(String(req.params.id));
   if (!c) return res.status(404).json({ error: "Unknown case" });
   try {
-    res.json(await submit(c.caseId, buildProposal(c, assessments.get(c.caseId)), String(req.body?.digest ?? "")));
+    res.json(await submit(c.caseId, buildProposal(c, latestAssessment(c.caseId)), String(req.body?.digest ?? "")));
   } catch (err) {
     sendError(res, err);
   }
@@ -180,19 +179,53 @@ app.post("/api/cases/:id/submit", async (req, res) => {
 app.post("/api/cases/:id/assess", assessLimit, async (req, res) => {
   const c = findAny(String(req.params.id));
   if (!c) return res.status(404).json({ error: "Unknown case" });
-  if (env.aiMode === "saved") {
-    const saved = findSaved(c.caseId, caseRevision(c));
-    if (!saved) return res.status(503).json({ error: "This demo has no saved AI result for this exact case state. Run it locally with live AI to assess it." });
-    assessments.set(c.caseId, saved);
-    return res.json(saved);
-  }
   try {
-    const result = await assessCase(c);
-    assessments.set(c.caseId, result);
-    res.json(result);
+    res.json(await assess(c));
+  } catch (err) {
+    if (err instanceof NoSavedResult) return res.status(503).json({ error: err.message });
+    sendError(res, err);
+  }
+});
+
+// --- Autopilot -------------------------------------------------------------------------
+
+app.get("/api/autopilot", (_req, res) => res.json({ rules: getRules(), lastRun: getLastRun(), liveWrites: env.allowSandboxWrites }));
+
+app.put("/api/autopilot/rules", (req, res) => res.json(setRules(req.body)));
+
+// One request can assess every open case, so it counts against the assessment limit.
+app.post("/api/autopilot/:mode", assessLimit, async (req, res) => {
+  const mode = String(req.params.mode);
+  if (mode !== "preview" && mode !== "run") return res.status(404).json({ error: "Use preview or run." });
+  try {
+    res.json(await runAutopilot(mode === "preview"));
   } catch (err) {
     sendError(res, err);
   }
+});
+
+// Every PayPal action taken or simulated, newest first, for the activity log.
+app.get("/api/activity", (_req, res) => {
+  res.json(
+    allAttempts()
+      .slice()
+      .reverse()
+      .map((a) => ({
+        id: a.id,
+        at: a.startedAt,
+        caseId: a.caseId,
+        action: { evidence: "Submit evidence", message: "Message buyer", refund: "Refund", offer: "Refund offer" }[a.kind ?? "evidence"],
+        by: a.by === "autopilot" ? "Autopilot" : "You",
+        rule: a.rule ?? "",
+        result: { submitting: "Sending", evidence_accepted: "Accepted by PayPal", done: "Done in PayPal", simulated: "Simulated", rejected: "Not sent", needs_reconciliation: "Unknown, check PayPal" }[a.state],
+        amount: Number(a.amount?.value ?? 0),
+        mode: a.target.mode === "sandbox" ? "PayPal sandbox" : "Simulated",
+        detail: a.error ?? a.summary ?? "",
+        // Pre-computed numbers so dashboard tiles can sum them without per-widget filters.
+        autopilotActions: a.by === "autopilot" && a.state !== "rejected" ? 1 : 0,
+        autopilotRefunded: a.by === "autopilot" && a.kind === "refund" && a.state !== "rejected" ? Number(a.amount?.value ?? 0) : 0,
+      })),
+  );
 });
 
 // Scenario only: simulate a newly synced record arriving for a case.
@@ -204,7 +237,7 @@ app.post("/api/cases/:id/advance", (req, res) => {
 
 app.post("/api/scenario/reset", (_req, res) => {
   resetScenario();
-  assessments.clear();
+  clearAssessments();
   resetSimulatedAttempts();
   observed.clear();
   res.json({ ok: true });

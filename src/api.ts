@@ -118,3 +118,49 @@ export const api = {
   refreshPaypal: (id: string) => post(`/api/cases/${id}/refresh`, {}),
   reset: () => call<{ ok: true }>("/api/scenario/reset", { method: "POST" }),
 };
+
+export interface ActivityRow {
+  id: string;
+  at: string;
+  caseId: string;
+  action: string;
+  by: string;
+  rule: string;
+  result: string;
+  amount: number;
+  mode: string;
+  detail: string;
+  autopilotActions: number;
+  autopilotRefunded: number;
+}
+
+export interface AutopilotRules {
+  refundSmall: { on: boolean; maxAmount: number };
+  submitEvidence: { on: boolean; maxAmount: number };
+  messageBuyer: { on: boolean };
+  refundBudgetPerRun: number;
+}
+
+export interface AutopilotPlanItem {
+  decision: { caseId: string; action: "refund" | "evidence" | "message" | "needs_you" | "skip"; rule?: string; why: string };
+  amount: string;
+  buyer: string;
+  source: "paypal" | "scenario";
+  simulated: boolean;
+  outcome?: { state: string; attemptId: string; error?: string };
+}
+
+export interface AutopilotRun {
+  at: string;
+  dryRun: boolean;
+  plan: AutopilotPlanItem[];
+}
+
+export const autopilotApi = {
+  get: () => call<{ rules: AutopilotRules; lastRun: AutopilotRun | null; liveWrites: boolean }>("/api/autopilot"),
+  setRules: (rules: AutopilotRules) =>
+    call<AutopilotRules>("/api/autopilot/rules", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rules) }),
+  preview: () => call<AutopilotRun>("/api/autopilot/preview", { method: "POST" }),
+  run: () => call<AutopilotRun>("/api/autopilot/run", { method: "POST" }),
+  activity: () => call<ActivityRow[]>("/api/activity"),
+};

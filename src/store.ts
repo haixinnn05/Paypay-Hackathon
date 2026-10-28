@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from "react";
-import { api, type CaseDetail, type QueueRow } from "./api.ts";
+import { api, autopilotApi, type ActivityRow, type AutopilotRules, type AutopilotRun, type CaseDetail, type QueueRow } from "./api.ts";
 
 // One small store shared by the page and every custom Studio widget (passed in as Studio's `context`),
 // so selecting a case in the queue updates the inspector and the action review together.
 
 interface State {
+  activity: ActivityRow[];
+  autopilot: { rules: AutopilotRules | null; lastRun: AutopilotRun | null; liveWrites: boolean; running: "preview" | "run" | null };
   merchantName: string;
   live: { configured: boolean; sync: { at: string; error: string | null } | null };
   rows: QueueRow[];
@@ -16,7 +18,7 @@ interface State {
   error: string | null;
 }
 
-let state: State = { live: { configured: false, sync: null }, merchantName: "", rows: [], selectedId: null, detail: null, focusedSource: null, busy: false, error: null };
+let state: State = { activity: [], autopilot: { rules: null, lastRun: null, liveWrites: false, running: null }, live: { configured: false, sync: null }, merchantName: "", rows: [], selectedId: null, detail: null, focusedSource: null, busy: false, error: null };
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<State>) {
@@ -27,6 +29,7 @@ function set(patch: Partial<State>) {
 async function refresh() {
   const s = await api.scenario();
   set({ merchantName: s.merchant.name, rows: s.cases, live: s.live });
+  autopilotApi.activity().then((activity) => set({ activity })).catch(() => {});
   // ?case=SCN-1002 opens a specific case, which is handy for demos and screenshots.
   const fromUrl = new URLSearchParams(location.search).get("case");
   const id = state.selectedId ?? s.cases.find((c) => c.caseId === fromUrl)?.caseId ?? s.cases[0]?.caseId ?? null;
@@ -68,6 +71,27 @@ export const store = {
   submit: (digest: string) => run((id) => api.submit(id, digest)),
   refreshPaypal: () => run(api.refreshPaypal),
   addShipment: (body: Parameters<typeof api.addShipment>[1]) => run((id) => api.addShipment(id, body)),
+  async loadAutopilot() {
+    const a = await autopilotApi.get();
+    set({ autopilot: { ...state.autopilot, ...a } });
+  },
+  async saveRules(rules: AutopilotRules) {
+    const saved = await autopilotApi.setRules(rules);
+    set({ autopilot: { ...state.autopilot, rules: saved, lastRun: null } });
+  },
+  async runAutopilot(mode: "preview" | "run") {
+    if (state.autopilot.running) return;
+    set({ autopilot: { ...state.autopilot, running: mode }, error: null });
+    try {
+      const lastRun = await (mode === "preview" ? autopilotApi.preview() : autopilotApi.run());
+      set({ autopilot: { ...state.autopilot, lastRun } });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err) });
+    } finally {
+      set({ autopilot: { ...state.autopilot, running: null } });
+      await refresh().catch(() => {});
+    }
+  },
   async syncLive() {
     if (state.busy) return;
     set({ busy: true, error: null });
