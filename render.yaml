@@ -1,0 +1,16 @@
+# Render Blueprint for the public demo: saved AI results, PayPal sandbox writes off, no secrets needed.
+services:
+  - type: web
+    name: dispute-copilot
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/config
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: AI_MODE
+        value: saved
+      - key: ALLOW_SANDBOX_WRITES
+        value: "false"
